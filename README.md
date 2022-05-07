@@ -5,13 +5,9 @@ management subsystem. This is a sister repo to
 [mm-book](https://github.com/lorenzo-stoakes/mm-book) a book I am writing on the
 linux memory management subsystem.
 
-## Building & running
+## Building
 
-To build & run the code simply:
-
-```
-make run
-```
+Simply `make` to compile binaries.
 
 ## License
 

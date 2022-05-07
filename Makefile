@@ -3,10 +3,7 @@ section-pointers: section-pointers.c
 
 all: section-pointers
 
-run:
-	./section-pointers
-
 clean:
 	rm section-pointers
 
-.PHONY: all clean run
+.PHONY: all clean
