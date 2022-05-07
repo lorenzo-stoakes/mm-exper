@@ -43,10 +43,11 @@ static void remove_aslr(char **argv)
 			fprintf(stderr, err_msg);
 			fprintf(stderr, "\n");
 		}
+
 		exit(EXIT_FAILURE);
 	}
 
-	// Now overwrite the process image with an ASLR disabled personality.
+	// Now overwrite the process image with an ASLR-disabled personality.
 	execv(argv[0], argv);
 }
 
@@ -54,8 +55,8 @@ int main(int argc, char **argv)
 {
 	remove_aslr(argv);
 
+	static int foo = 3; // Intentionally not const so it lives in .data not .rodata
 	const void *orig_brk = sbrk(0);
-	const static int foo = 3;
 	const int *ptr = malloc(1);
 	const void *brk_after_ptr = sbrk(0);
 	const void *mmap_ptr = mmap(NULL, 1024 * 1024, PROT_READ | PROT_WRITE,
