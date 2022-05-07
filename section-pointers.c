@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
+#include <sys/personality.h>
 #include <unistd.h>
 
 /*
@@ -43,14 +44,47 @@ int __libc_start_main(int (*main)(int, char **, char **),
 	return orig(main, argc, argv, init, fini, rtld_fini, stack_end);
 }
 
-int main(void)
+// Remove ASLR as we're interested in the layout of 'unslid' virtual addresses.
+static void remove_aslr(char **argv)
 {
+	const int curr_personality = personality(ADDR_NO_RANDOMIZE);
+
+	// Nothing to do, ASLR is already disabled.
+	if ((curr_personality & ADDR_NO_RANDOMIZE) == ADDR_NO_RANDOMIZE)
+		return;
+
+	if (curr_personality == -1) {
+		perror("Unable to change personality");
+		exit(EXIT_FAILURE);
+	}
+
+	const int persona = personality(0xffffffff);
+	if ((persona & ADDR_NO_RANDOMIZE) != ADDR_NO_RANDOMIZE) {
+		const char *err_msg = "Could not obtain current personality";
+
+		if (persona == -1) {
+			perror(err_msg);
+		} else {
+			fprintf(stderr, err_msg);
+			fprintf(stderr, "\n");
+		}
+		exit(EXIT_FAILURE);
+	}
+
+	// Now overwrite the process image with an ASLR disabled personality.
+	execv(argv[0], argv);
+}
+
+int main(int argc, char **argv)
+{
+	remove_aslr(argv);
+
 	const static int foo = 3;
 	const int *ptr = malloc(1);
 	const void *brk_after_ptr = sbrk(0);
 	const void *mmap_ptr = mmap(NULL, 1024 * 1024, PROT_READ | PROT_WRITE,
 				    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-	const void* stack_ptr = __builtin_frame_address(0);
+	const void *stack_ptr = __builtin_frame_address(0);
 	const uint64_t stack_mmap_delta_mb =
 		((uint64_t)stack_ptr - (uint64_t)mmap_ptr) >> 20;
 
@@ -64,5 +98,5 @@ int main(void)
 	printf("%p\t[stack]\n", stack_ptr);
 	printf("%p\t[mmap] (%lu MiB below stack)\n", mmap_ptr, stack_mmap_delta_mb);
 
-	return 0;
+	return EXIT_SUCCESS;
 }

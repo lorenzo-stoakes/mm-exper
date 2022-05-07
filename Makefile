@@ -3,8 +3,8 @@ section-pointers: section-pointers.c
 
 all: section-pointers
 
-run: section-pointers
-	setarch -R ./section-pointers
+run:
+	./section-pointers
 
 clean:
 	rm section-pointers
