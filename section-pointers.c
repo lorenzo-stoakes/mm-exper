@@ -1,7 +1,9 @@
 #define _GNU_SOURCE
 #include <dlfcn.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/mman.h>
 #include <unistd.h>
 
 /*
@@ -43,9 +45,14 @@ int __libc_start_main(int (*main)(int, char **, char **),
 
 int main(void)
 {
-	static int foo = 3;
-	int *ptr = malloc(1);
-	void *brk_after_ptr = sbrk(0);
+	const static int foo = 3;
+	const int *ptr = malloc(1);
+	const void *brk_after_ptr = sbrk(0);
+	const void *mmap_ptr = mmap(NULL, 1024 * 1024, PROT_READ | PROT_WRITE,
+				    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	const void* stack_ptr = __builtin_frame_address(0);
+	const uint64_t stack_mmap_delta_mb =
+		((uint64_t)stack_ptr - (uint64_t)mmap_ptr) >> 20;
 
 	printf("%p\t[&main]\n", &main);
 	printf("%p\t[data_start]\n", &data_start);
@@ -54,7 +61,8 @@ int main(void)
 	printf("%p\t[orig brk]\n", orig_brk);
 	printf("%p\t[malloc'd val]\n", ptr);
 	printf("%p\t[brk]\n", brk_after_ptr);
-	printf("%p\t[stack]\n", __builtin_frame_address(0));
+	printf("%p\t[stack]\n", stack_ptr);
+	printf("%p\t[mmap] (%lu MiB below stack)\n", mmap_ptr, stack_mmap_delta_mb);
 
 	return 0;
 }
