@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/personality.h>
+#include <sys/resource.h>
 #include <unistd.h>
 
 /*
@@ -65,6 +66,12 @@ int main(int argc, char **argv)
 	const uint64_t stack_mmap_delta_mb =
 		((uint64_t)stack_ptr - (uint64_t)mmap_ptr) >> 20;
 
+	struct rlimit stack_limits;
+	if (getrlimit(RLIMIT_STACK, &stack_limits) != 0) {
+		perror("Obtaining stack limit");
+		return EXIT_FAILURE;
+	}
+
 	printf("%p\t[&main]\n", &main);
 	printf("%p\t[data_start]\n", &data_start);
 	printf("%p\t[static variable]\n", &foo);
@@ -73,7 +80,8 @@ int main(int argc, char **argv)
 	printf("%p\t[malloc'd val]\n", ptr);
 	printf("%p\t[brk]\n", brk_after_ptr);
 	printf("%p\t[stack]\n", stack_ptr);
-	printf("%p\t[mmap] (%lu MiB below stack)\n", mmap_ptr, stack_mmap_delta_mb);
+	printf("%p\t[mmap] (%lu MiB below stack, %lu MiB soft limit)\n",
+	       mmap_ptr, stack_mmap_delta_mb, stack_limits.rlim_cur >> 20);
 
 	return EXIT_SUCCESS;
 }
