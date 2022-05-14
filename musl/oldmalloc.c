@@ -353,7 +353,9 @@ void *musl_malloc(size_t n)
 
 		pr_dbg_chunk("    | returning", c);
 
-		return CHUNK_TO_MEM(c);
+		void *ret = CHUNK_TO_MEM(c);
+		pr_dbg("    | (returned ptr %p)", ret);
+		return ret;
 	}
 
 	i = bin_index_up(n);
