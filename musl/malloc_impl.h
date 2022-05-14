@@ -31,6 +31,6 @@ struct bin {
 #define CHUNK_TO_MEM(c) (void *)((char *)(c) + OVERHEAD)
 #define BIN_TO_CHUNK(i) (MEM_TO_CHUNK(&mal.bins[i].head))
 
-#define C_INUSE  ((size_t)1)
+#define C_INUSE ((size_t)1)
 
 #define IS_MMAPPED(c) !((c)->csize & (C_INUSE))
