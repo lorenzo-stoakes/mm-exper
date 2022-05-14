@@ -510,6 +510,8 @@ void *musl_malloc(size_t n)
 			return NULL;
 		}
 	}
+
+	// We trim for non-mmap non-fastpath.
 	trim(c, n);
 	unlock(mal.split_merge_lock);
 
