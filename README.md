@@ -12,3 +12,5 @@ Simply `make` to compile binaries.
 ## License
 
 All code is MIT licensed.
+
+[musl](https://musl.libc.org/) code used under [MIT license](musl/COPYRIGHT).
