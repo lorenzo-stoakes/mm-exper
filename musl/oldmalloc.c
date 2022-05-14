@@ -18,7 +18,8 @@
 #endif
 
 #ifdef DEBUG_OUTPUT
-#define pr_dbg(fmt, ...) printf("debug: " fmt "\n", ## __VA_ARGS__)
+#define pr_dbg(fmt, ...) printf("debug: " __FILE__ ": %d: " fmt "\n", __LINE__, ## __VA_ARGS__)
+#define pr_dbg_chunk(preface, chunk) pr_dbg("%s: chunk[psize=%lu, csize=%lu]", preface, chunk->psize, chunk->csize)
 #else
 #define pr_dbg(...)
 #endif
@@ -320,30 +321,48 @@ void *musl_malloc(size_t n)
 	int i, j;
 	uint64_t mask;
 
-	pr_dbg("malloc %lu", n);
+	pr_dbg("-- MALLOC %lu --", n);
 
-	if (adjust_size(&n) < 0)
+	if (adjust_size(&n) < 0) {
+		pr_dbg("adjust_size() failed");
 		return NULL;
+	}
+
+	pr_dbg("  | adjusted size = %lu (%lu SIZE_ALIGNs)", n, n / SIZE_ALIGN);
 
 	if (n > MMAP_THRESHOLD) {
+		pr_dbg("  | MMAP because %lu > MMAP_THRESHOLD (= %lu)",
+		       n, MMAP_THRESHOLD);
+
 		size_t len = align64_up(n + OVERHEAD, PAGE_SIZE);
+		pr_dbg("    | page-aligned overhead-extended mmap size is %lu", len);
+
 		char *base = mmap(0, len, PROT_READ | PROT_WRITE,
 				  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-		if (base == (void *)-1)
+		if (base == (void *)-1) {
+			pr_dbg("    | mmap() failed");
 			return NULL;
+		}
 		c = (void *)(base + SIZE_ALIGN - OVERHEAD);
 		c->csize = len - (SIZE_ALIGN - OVERHEAD);
 		c->psize = SIZE_ALIGN - OVERHEAD;
+
+		pr_dbg_chunk("    | returning", c);
+
 		return CHUNK_TO_MEM(c);
 	}
 
 	i = bin_index_up(n);
+	pr_dbg("  | BRK bin_index_up() = %d", i);
+
 	if (i < 63 && is_bit_set(mal.binmap, i)) {
 		lock_bin(i);
 		c = mal.bins[i].head;
 		if (c != BIN_TO_CHUNK(i) && CHUNK_SIZE(c) - n <= DONTCARE) {
 			unbin(c, i);
 			unlock_bin(i);
+
+			pr_dbg_chunk("    | FAST PATH got from free list", c);
 			return CHUNK_TO_MEM(c);
 		}
 		unlock_bin(i);
@@ -357,6 +376,8 @@ void *musl_malloc(size_t n)
 		if (c != BIN_TO_CHUNK(j)) {
 			unbin(c, j);
 			unlock_bin(j);
+			pr_dbg_chunk("    | SLOW PATH got from free list", c);
+
 			break;
 		}
 		unlock_bin(j);
@@ -364,7 +385,12 @@ void *musl_malloc(size_t n)
 
 	if (mask == 0) {
 		c = expand_heap(n);
+
+		pr_dbg_chunk("    | SLOWEST PATH expanded heap", c);
+
 		if (!c) {
+			pr_dbg("    | FAILURE could not expand heap");
+
 			unlock(mal.split_merge_lock);
 			return NULL;
 		}
@@ -451,15 +477,20 @@ static void unmap_chunk(struct chunk *self)
 
 void musl_free(void *p)
 {
-	pr_dbg("free %p", p);
+	pr_dbg("-- FREE %p --", p);
 
-	if (!p)
+	if (!p) {
+		pr_dbg("  | NULL pointer so abort");
 		return;
+	}
 
 	struct chunk *self = MEM_TO_CHUNK(p);
 
-	if (IS_MMAPPED(self))
+	if (IS_MMAPPED(self)) {
+		pr_dbg("  | mmap()'d so munmap()'ing");
 		unmap_chunk(self);
-	else
+	} else {
+		pr_dbg("  | from free list so __bin_chunk()'ing");
 		__bin_chunk(self);
+	}
 }
