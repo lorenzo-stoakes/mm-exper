@@ -319,11 +319,11 @@ static void trim(struct chunk *self, size_t n)
 	split = (void *)((char *)self + n);
 
 	split->psize = n | C_INUSE;
-	split->csize = n1-n;
-	next->psize = n1-n;
+	split->csize = n1 - n;
+	next->psize = n1 - n;
 	self->csize = n | C_INUSE;
 
-	int i = bin_index(n1-n);
+	int i = bin_index(n1 - n);
 	lock_bin(i);
 
 	bin_chunk(split, i);
@@ -342,8 +342,8 @@ void *musl_malloc(size_t n)
 
 	if (n > MMAP_THRESHOLD) {
 		size_t len = align64_up(n + OVERHEAD, PAGE_SIZE);
-		char *base = mmap(0, len, PROT_READ|PROT_WRITE,
-				  MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+		char *base = mmap(0, len, PROT_READ | PROT_WRITE,
+				  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 		if (base == (void *)-1)
 			return NULL;
 		c = (void *)(base + SIZE_ALIGN - OVERHEAD);
@@ -356,13 +356,14 @@ void *musl_malloc(size_t n)
 	if (i < 63 && is_bit_set(mal.binmap, i)) {
 		lock_bin(i);
 		c = mal.bins[i].head;
-		if (c != BIN_TO_CHUNK(i) && CHUNK_SIZE(c)-n <= DONTCARE) {
+		if (c != BIN_TO_CHUNK(i) && CHUNK_SIZE(c) - n <= DONTCARE) {
 			unbin(c, i);
 			unlock_bin(i);
 			return CHUNK_TO_MEM(c);
 		}
 		unlock_bin(i);
 	}
+
 	lock(mal.split_merge_lock);
 	for (mask = mask_high_bits(mal.binmap, i); mask != 0; clear_lowest_bit(mask)) {
 		j = first_set(mask);
@@ -375,6 +376,7 @@ void *musl_malloc(size_t n)
 		}
 		unlock_bin(j);
 	}
+
 	if (mask == 0) {
 		c = expand_heap(n);
 		if (!c) {
