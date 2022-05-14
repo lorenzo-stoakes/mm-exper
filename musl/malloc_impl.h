@@ -6,10 +6,21 @@
 #define PAGE_SIZE (1UL << 12)
 
 struct chunk {
+	/*
+	 * - psize = the size of the previous chunk.
+	 * - csize = the size of this chunk.
+	 *
+	 * Both values include the overhead which is sizeof(psize) +
+	 * sizeof(csize). The lower bit indicates whether the prior/current
+	 * chunk are in use or not.
+	 */
 	size_t psize, csize;
+	// These fields are only present if the chunk is NOT in use. Used for
+	// freelists.
 	struct chunk *next, *prev;
 };
 
+// Represents a 'bin' containing a free list for chunks of a certain size range.
 struct bin {
 	volatile int lock[2];
 	struct chunk *head;
@@ -23,6 +34,8 @@ struct bin {
 #define DONTCARE 16
 #define RECLAIM 163840
 
+// Clear lower bit for sizing. Chunks are always aligned to SIZE_ALIGN so the
+// actual size will always have this bit clear.
 #define CHUNK_SIZE(c) ((c)->csize & -2)
 #define CHUNK_PSIZE(c) ((c)->psize & -2)
 #define PREV_CHUNK(c) ((struct chunk *)((char *)(c) - CHUNK_PSIZE(c)))
