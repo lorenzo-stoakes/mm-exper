@@ -20,9 +20,9 @@
 #ifdef DEBUG_OUTPUT
 #define pr_dbg(fmt, ...) printf("debug: " __FILE__ ": %d: " fmt "\n", __LINE__, ## __VA_ARGS__)
 #define pr_dbg_chunk(preface, chunk) pr_dbg("%s: chunk[ptr=%p, psize=%lu [%lu]%s, csize=%lu [%lu]%s]", preface, chunk, \
-					    chunk->psize & -2, (chunk->psize & -2) / SIZE_ALIGN, \
+					    chunk->psize & -2, CHUNK_PSIZE(chunk) / SIZE_ALIGN, \
 					    chunk->psize & 1 ? " (used)" : "", \
-					    chunk->csize & -2, (chunk->csize & -2) / SIZE_ALIGN, \
+					    chunk->csize & -2, CHUNK_SIZE(chunk) / SIZE_ALIGN, \
 					    chunk->csize & 1 ? " (used)" : "")
 #else
 #define pr_dbg(...)
@@ -64,7 +64,6 @@ void musl_dump_bins(void)
 				continue;
 
 			const size_t num_aligns = curr->csize / SIZE_ALIGN;
-
 			printf("%lu ", num_aligns);
 		}
 		printf("\n");
@@ -247,6 +246,7 @@ static void *__expand_heap(size_t *pn)
 
 		*pn = n;
 		stored_brk += n;
+		stats.heap_bytes += n;
 
 		pr_dbg("      | heap allocated memory expanded from %p",
 		       (void *)(stored_brk - n));
@@ -266,6 +266,9 @@ static void *__expand_heap(size_t *pn)
 
 	void *area = mmap(0, n, PROT_READ|PROT_WRITE,
 			  MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+
+	stats.mmap_bytes += n;
+
 	if (area == MAP_FAILED) {
 		pr_dbg("      | mmap FAILED!!");
 
@@ -355,6 +358,9 @@ static void unbin(struct chunk *c, int i)
 	c->next->prev = c->prev;
 	c->csize |= C_INUSE;
 	NEXT_CHUNK(c)->psize |= C_INUSE;
+
+	stats.free_block_bytes -= CHUNK_SIZE(c);
+	stats.free_bytes -= CHUNK_SIZE(c);
 }
 
 static void bin_chunk(struct chunk *self, int i)
@@ -379,6 +385,9 @@ static void bin_chunk(struct chunk *self, int i)
 	self->prev->next = self;
 	if (self->prev == BIN_TO_CHUNK(i))
 		mal.binmap |= (1UL << i);
+
+	stats.free_block_bytes += CHUNK_SIZE(self);
+	stats.free_bytes += CHUNK_SIZE(self);
 }
 
 // Trim a chunk down to the actaully used size.
@@ -445,6 +454,9 @@ void *musl_malloc(size_t n)
 		c->csize = len - (SIZE_ALIGN - OVERHEAD);
 		c->psize = SIZE_ALIGN - OVERHEAD;
 
+		stats.mmap_bytes += len;
+		stats.allocated_bytes += CHUNK_SIZE(c);
+
 		pr_dbg_chunk("    | returning", c);
 
 		void *ret = CHUNK_TO_MEM(c);
@@ -461,6 +473,8 @@ void *musl_malloc(size_t n)
 		if (c != BIN_TO_CHUNK(i) && CHUNK_SIZE(c) - n <= DONTCARE) {
 			unbin(c, i);
 			unlock_bin(i);
+
+			stats.allocated_bytes += CHUNK_SIZE(c);
 
 			pr_dbg_chunk("    | FAST PATH got from free list", c);
 			return CHUNK_TO_MEM(c);
@@ -499,6 +513,8 @@ void *musl_malloc(size_t n)
 	trim(c, n);
 	unlock(mal.split_merge_lock);
 
+	stats.allocated_bytes += CHUNK_SIZE(c);
+
 	pr_dbg_chunk("    | returning", c);
 	void *ret = CHUNK_TO_MEM(c);
 		pr_dbg("    | (returned ptr %p)", ret);
@@ -507,10 +523,9 @@ void *musl_malloc(size_t n)
 
 void __bin_chunk(struct chunk *self)
 {
-	stats.allocated_bytes -= CHUNK_SIZE(self);
-	stats.free_bytes += CHUNK_SIZE(self);
-
 	struct chunk *next = NEXT_CHUNK(self);
+
+	stats.allocated_bytes -= CHUNK_SIZE(self);
 
 	pr_dbg_chunk("    | freeing chunk", self);
 
@@ -589,6 +604,8 @@ void __bin_chunk(struct chunk *self)
 
 		pr_dbg("      | ptr=%p reclaim from %p to %p", self, (void *)a, (void *)b);
 		pr_dbg("      | reclaim %lu bytes (%lu pages)", b - a, (b - a) / PAGE_SIZE);
+
+		stats.reclaimed_bytes += (uint64_t)(b - a);
 
 		int e = errno;
 		madvise((void *)a, b - a, MADV_DONTNEED);
