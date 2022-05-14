@@ -48,5 +48,16 @@ static inline bool is_bit_set(uint64_t value, uint64_t bit)
 	return !!(value & (1UL << bit));
 }
 
+/*
+ * Mask high bits up to and including `bit`.
+ *
+ * e.g. mask_high_bits(0b1110111, 3) == 0b1110000.
+ */
+static inline uint64_t mask_high_bits(uint64_t value, uint64_t bit)
+{
+	// Using two's complement: -0b01000 == 0b..10111 + 1 == 0b..11000.
+	return value & -(1UL << bit);
+}
+
 #undef ALIGN_UP_IMPL_1
 #undef ALIGN_UP_IMPL_2
