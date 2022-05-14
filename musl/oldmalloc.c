@@ -320,6 +320,8 @@ void *musl_malloc(size_t n)
 	int i, j;
 	uint64_t mask;
 
+	pr_dbg("malloc %lu", n);
+
 	if (adjust_size(&n) < 0)
 		return NULL;
 
@@ -449,7 +451,10 @@ static void unmap_chunk(struct chunk *self)
 
 void musl_free(void *p)
 {
-	if (!p) return;
+	pr_dbg("free %p", p);
+
+	if (!p)
+		return;
 
 	struct chunk *self = MEM_TO_CHUNK(p);
 

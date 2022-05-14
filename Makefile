@@ -8,7 +8,7 @@ section-pointers: section-pointers.c $(SHARED_HEADERS) Makefile
 	gcc $(SHARED_OPTIONS) -no-pie section-pointers.c -o section-pointers
 
 test-musl-malloc: test-musl-malloc.c musl/oldmalloc.c $(SHARED_HEADERS) Makefile
-	gcc $(SHARED_OPTIONS) -Imusl/ -Wno-int-conversion \
+	gcc $(SHARED_OPTIONS) -Imusl/ -Wno-int-conversion -DDEBUG_OUTPUT \
 		test-musl-malloc.c musl/oldmalloc.c -o test-musl-malloc
 
 clean:
