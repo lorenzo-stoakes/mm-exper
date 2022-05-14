@@ -322,6 +322,20 @@ static void bin_chunk(struct chunk *self, int i)
 {
 	self->next = BIN_TO_CHUNK(i);
 	self->prev = mal.bins[i].tail;
+
+	/*
+	 * This is seriously dodgy/clever.
+	 *
+	 * 1. BIN_TO_CHUNK() subtracts 16 bytes from &mal.bins[i].head which ==
+	 *    &mal.bins[i - 1].tail
+	 *
+	 * 2. This means BIN_TO_CHUNK(i)->next == &mal.bins[i].head and
+	 *    BIN_TO_CHUNK(i)->prev == &mal.bins[i].tail
+	 *
+	 * Any access to BIN_TO_CHUNK(i)->[psize/csize] would have you writing
+	 * to the locks...
+	 */
+
 	self->next->prev = self;
 	self->prev->next = self;
 	if (self->prev == BIN_TO_CHUNK(i))
