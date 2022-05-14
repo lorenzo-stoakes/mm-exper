@@ -29,29 +29,6 @@ static struct {
 	volatile int split_merge_lock[2];
 } mal;
 
-/* Synchronization tools */
-
-static inline void lock(volatile int *lk)
-{
-	// TODO: Implement locks.
-	(void)lk;
-
-	//while(a_swap(lk, 1)) __wait(lk, lk+1, 1, 1);
-}
-
-static inline void unlock(volatile int *lk)
-{
-	// TODO: Implement locks.
-	(void)lk;
-
-	/*
-	if (lk[0]) {
-		a_store(lk, 0);
-		if (lk[1]) __wake(lk, 1, 1);
-	}
-	*/
-}
-
 static void crash(void)
 {
 	fprintf(stderr, "FATAL ERROR\n");

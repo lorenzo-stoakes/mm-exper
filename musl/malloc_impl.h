@@ -34,3 +34,15 @@ struct bin {
 #define C_INUSE ((size_t)1)
 
 #define IS_MMAPPED(c) !((c)->csize & (C_INUSE))
+
+static inline void lock(volatile int *lk)
+{
+	// TODO: Implement locks.
+	(void)lk;
+}
+
+static inline void unlock(volatile int *lk)
+{
+	// TODO: Implement locks.
+	(void)lk;
+}
