@@ -183,22 +183,35 @@ static void *__expand_heap(size_t *pn)
 
 	// If the expansion request is unreasonable, abort.
 	if (n > SIZE_MAX/2 - PAGE_SIZE) {
+		pr_dbg("      | Cannot expand heap to accomodate %lu, too big", n);
 		errno = ENOMEM;
 		return NULL;
 	}
 
 	// We always align to pages when expanding the heap.
+
+	pr_dbg("      | aligned %lu to page size = %lu", n, align64_up(n, PAGE_SIZE));
 	n = align64_up(n, PAGE_SIZE);
 
 	// If we don't already know current program break, go get it.
-	if (stored_brk == 0)
+	if (stored_brk == 0) {
 		stored_brk = align64_up(sbrk(0), PAGE_SIZE);
+
+		pr_dbg("      | retrieved initial brk = %p", (void *)stored_brk);
+	}
 
 	// If we won't overflow, try extending the program break.
 	const bool would_overflow = n >= SIZE_MAX - stored_brk;
 	if (!would_overflow && sbrk(n) >= 0) {
+		pr_dbg("      | brk successfully extended by %lu to %p",
+		       n, (void *)(stored_brk + n));
+
 		*pn = n;
 		stored_brk += n;
+
+		pr_dbg("      | heap allocated memory expanded from %p",
+		       (void *)(stored_brk - n));
+
 		return (void *)(stored_brk - n);
 	}
 
@@ -209,10 +222,18 @@ static void *__expand_heap(size_t *pn)
 	size_t min = (size_t)PAGE_SIZE << mmap_step/2;
 	n = n < min ? min : n;
 
+	pr_dbg("      | brk extension FAILED, trying mmap (min %lu, size maybe changed to %lu)",
+	       min, n);
+
 	void *area = mmap(0, n, PROT_READ|PROT_WRITE,
 			  MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
-	if (area == MAP_FAILED)
+	if (area == MAP_FAILED) {
+		pr_dbg("      | mmap FAILED!!");
+
 		return NULL;
+	}
+
+	pr_dbg("      | heap expanded via MMAP at %p, mmap_step=%u", area, mmap_step);
 
 	*pn = n;
 	mmap_step++;
@@ -228,18 +249,26 @@ static struct chunk *expand_heap(size_t n)
 	// The argument n already accounts for the caller's chunk overhead
 	// needs, but if the heap can't be extended in-place, we need room for
 	// an extra zero-sized sentinel chunk.
+	pr_dbg("      | extending size %lu to %lu", n, n + SIZE_ALIGN);
 	n += SIZE_ALIGN;
 
 	p = __expand_heap(&n);
 	if (p == NULL)
 		return NULL;
 
+	pr_dbg("      | heap expansion resulted in %p, previous end was %p",
+	       p, end);
 	// If not just expanding existing space, we need to make a
 	// new sentinel chunk below the allocated space.
 	if (p != end) {
+		pr_dbg("      | p != end so adding sentinel chunk");
+
 		// Valid/safe because of the prologue increment.
 		n -= SIZE_ALIGN;
 		p = (char *)p + SIZE_ALIGN;
+
+		pr_dbg("      | offset new chunk to %p", p);
+
 		w = MEM_TO_CHUNK(p);
 		w->psize = 0 | C_INUSE;
 	}
@@ -250,10 +279,14 @@ static struct chunk *expand_heap(size_t n)
 	w->psize = n | C_INUSE;
 	w->csize = 0 | C_INUSE;
 
+	pr_dbg("      | new end = %p, added footer at %p", end, w);
+
 	// Fill in header, which may be new or may be replacing a
 	// zero-size sentinel header at the old end-of-heap.
 	w = MEM_TO_CHUNK(p);
 	w->csize = n | C_INUSE;
+
+	pr_dbg("      | Using footer of previous chunk at %p + marking in use", w);
 
 	return w;
 }
@@ -302,7 +335,7 @@ static void trim(struct chunk *self, size_t n)
 	struct chunk *next, *split;
 
 	if (n1 - n <= DONTCARE) {
-		pr_dbg("      | delta %lu so small we will not TRIM", n1 - n);
+		pr_dbg("    | delta %lu so small we will not TRIM", n1 - n);
 		return;
 	}
 
@@ -317,9 +350,9 @@ static void trim(struct chunk *self, size_t n)
 	int i = bin_index(n1 - n);
 	lock_bin(i);
 
-	pr_dbg("      | TRIMmed chunk (size %lu [%lu]) from retrieved chunk (size %lu [%lu], binindex %d) ",
+	pr_dbg("    | TRIMmed chunk (size %lu [%lu]) from retrieved chunk (size %lu [%lu], binindex %d) ",
 	       n, n / SIZE_ALIGN, n1, n1 / SIZE_ALIGN, bin_index(n1));
-	pr_dbg("      | TRIMmed free block (size %lu [%lu]) reinserted into binindex %d",
+	pr_dbg("    | TRIMmed free block (size %lu [%lu]) reinserted into binindex %d",
 	       split->csize, split->csize / SIZE_ALIGN, i);
 
 	bin_chunk(split, i);
@@ -402,7 +435,7 @@ void *musl_malloc(size_t n)
 		c = expand_heap(n);
 
 		if (c != NULL) {
-			pr_dbg_chunk("      | got", c);
+			pr_dbg_chunk("    | got", c);
 		} else {
 			pr_dbg("    | FAILURE could not expand heap");
 
