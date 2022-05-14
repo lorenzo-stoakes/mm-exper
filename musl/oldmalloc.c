@@ -457,7 +457,7 @@ void __bin_chunk(struct chunk *self)
 	/* Replace middle of large chunks with fresh zero pages */
 	if (size > RECLAIM && !share_highest_bit(size, size - osize)) {
 		uintptr_t a = (uintptr_t)align64_up((uint64_t)self + SIZE_ALIGN, PAGE_SIZE);
-		uintptr_t b = (uintptr_t)align64((uint64_t)self - SIZE_ALIGN, PAGE_SIZE);
+		uintptr_t b = (uintptr_t)align64((uint64_t)next - SIZE_ALIGN, PAGE_SIZE);
 
 		int e = errno;
 		madvise((void *)a, b - a, MADV_DONTNEED);
