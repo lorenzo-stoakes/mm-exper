@@ -410,6 +410,8 @@ void __bin_chunk(struct chunk *self)
 {
 	struct chunk *next = NEXT_CHUNK(self);
 
+	pr_dbg_chunk("    | freeing chunk", self);
+
 	// Crash on corrupted footer (likely from buffer overflow).
 	if (next->psize != self->csize)
 		crash();
@@ -425,24 +427,41 @@ void __bin_chunk(struct chunk *self)
 
 	if (psize > 0) {
 		int i = bin_index(psize);
+		pr_dbg("    | prev bin_index = %d, psize=%lu (%lu SIZE_ALIGNs)",
+		       i, psize, psize / SIZE_ALIGN);
+
 		lock_bin(i);
-		if (!(self->psize & C_INUSE)) {
+
+		if (self->psize & C_INUSE) {
+			pr_dbg("      | in use");
+		} else {
 			struct chunk *prev = PREV_CHUNK(self);
+			pr_dbg_chunk("      | merge", prev);
 
 			unbin(prev, i);
 			self = prev;
+
+			pr_dbg("      | size += %lu = %lu", psize, size + psize);
 			size += psize;
 		}
+
 		unlock_bin(i);
 	}
 
 	if (nsize > 0) {
 		int i = bin_index(nsize);
+		pr_dbg("    | next bin_index = %d, nsize=%lu (%lu SIZE_ALIGNs)",
+		       i, nsize, nsize / SIZE_ALIGN);
 
 		lock_bin(i);
-		if (!(next->csize & C_INUSE)) {
+		if (next->csize & C_INUSE) {
+			pr_dbg("      | in use");
+		} else {
 			unbin(next, i);
 			next = NEXT_CHUNK(next);
+			pr_dbg_chunk("      | merge", next);
+
+			pr_dbg("      | size += %lu = %lu", nsize, size + nsize);
 			size += nsize;
 		}
 		unlock_bin(i);
@@ -453,13 +472,21 @@ void __bin_chunk(struct chunk *self)
 
 	self->csize = size;
 	next->psize = size;
+
+	pr_dbg_chunk("    | freed chunk", self);
+
 	bin_chunk(self, i);
 	unlock(mal.split_merge_lock);
 
 	/* Replace middle of large chunks with fresh zero pages */
 	if (size > RECLAIM && !share_highest_bit(size, size - osize)) {
+		pr_dbg("    | RECLAIM: %lu [%lu]", size, size / SIZE_ALIGN);
+
 		uintptr_t a = (uintptr_t)align64_up((uint64_t)self + SIZE_ALIGN, PAGE_SIZE);
 		uintptr_t b = (uintptr_t)align64((uint64_t)next - SIZE_ALIGN, PAGE_SIZE);
+
+		pr_dbg("      | ptr=%p reclaim from %p to %p", self, (void *)a, (void *)b);
+		pr_dbg("      | reclaim %lu bytes (%lu pages)", b - a, (b - a) / PAGE_SIZE);
 
 		int e = errno;
 		madvise((void *)a, b - a, MADV_DONTNEED);
