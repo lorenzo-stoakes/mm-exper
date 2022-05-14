@@ -353,7 +353,7 @@ void *musl_malloc(size_t n)
 	}
 
 	i = bin_index_up(n);
-	if (i<63 && (mal.binmap & (1ULL<<i))) {
+	if (i < 63 && is_bit_set(mal.binmap, i)) {
 		lock_bin(i);
 		c = mal.bins[i].head;
 		if (c != BIN_TO_CHUNK(i) && CHUNK_SIZE(c)-n <= DONTCARE) {
