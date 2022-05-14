@@ -17,6 +17,12 @@
 #define inline inline __attribute__((always_inline))
 #endif
 
+#ifdef DEBUG_OUTPUT
+#define pr_dbg(fmt, ...) printf("debug: " fmt "\n", ## __VA_ARGS__)
+#else
+#define pr_dbg(...)
+#endif
+
 static struct {
 	volatile uint64_t binmap;
 	struct bin bins[64];
