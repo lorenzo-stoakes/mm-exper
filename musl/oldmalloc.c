@@ -3,12 +3,13 @@
 #include "bitwise.h"
 #include "malloc_impl.h"
 
+#include <errno.h>
+#include <limits.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
-#include <stdint.h>
-#include <errno.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -77,57 +78,80 @@ static const unsigned char bin_tab[60] = {
 
 static int bin_index(size_t x)
 {
-	x = x / SIZE_ALIGN - 1;
-	if (x <= 32) return x;
-	if (x < 512) return bin_tab[x/8-4];
-	if (x > 0x1c00) return 63;
+	x = (x / SIZE_ALIGN) - 1;
+
+	if (x <= 32)
+		return x;
+	if (x < 512)
+		return bin_tab[x/8-4];
+	if (x > 0x1c00)
+		return 63;
+
 	return bin_tab[x/128-4] + 16;
 }
 
 static int bin_index_up(size_t x)
 {
-	x = x / SIZE_ALIGN - 1;
-	if (x <= 32) return x;
+	x = (x / SIZE_ALIGN) - 1;
+
+	if (x <= 32)
+		return x;
+
 	x--;
-	if (x < 512) return bin_tab[x/8-4] + 1;
+
+	if (x < 512)
+		return bin_tab[x/8-4] + 1;
+
 	return bin_tab[x/128-4] + 17;
 }
 
-/* Expand the heap in-place if brk can be used, or otherwise via mmap,
- * using an exponential lower bound on growth by mmap to make
- * fragmentation asymptotically irrelevant. The size argument is both
- * an input and an output, since the caller needs to know the size
- * allocated, which will be larger than requested due to page alignment
- * and mmap minimum size rules. The caller is responsible for locking
- * to prevent concurrent calls. */
-
+/*
+ * Expand the heap in-place if brk can be used, or otherwise via mmap, using an
+ * exponential lower bound on growth by mmap to make fragmentation
+ * asymptotically irrelevant. The size argument is both an input and an output,
+ * since the caller needs to know the size allocated, which will be larger than
+ * requested due to page alignment and mmap minimum size rules. The caller is
+ * responsible for locking to prevent concurrent calls.
+ */
 static void *__expand_heap(size_t *pn)
 {
 	static uintptr_t stored_brk;
 	static unsigned mmap_step;
 	size_t n = *pn;
 
+	// If the expansion request is unreasonable, abort.
 	if (n > SIZE_MAX/2 - PAGE_SIZE) {
 		errno = ENOMEM;
-		return 0;
+		return NULL;
 	}
+
+	// We always align to pages when expanding the heap.
 	n = align64_up(n, PAGE_SIZE);
 
-	if (!stored_brk) {
+	// If we don't already know current program break, go get it.
+	if (stored_brk == 0)
 		stored_brk = align64_up(sbrk(0), PAGE_SIZE);
-	}
 
-	if (n < SIZE_MAX - stored_brk && sbrk(n) >= 0) {
+	// If we won't overflow, try extending the program break.
+	const bool would_overflow = n >= SIZE_MAX - stored_brk;
+	if (!would_overflow && sbrk(n) >= 0) {
 		*pn = n;
 		stored_brk += n;
-		return (void *)(stored_brk-n);
+		return (void *)(stored_brk - n);
 	}
 
+	// OK we failed to extend program break, let's try an mmap.
+
+	// We perform mmap() invocations in gradually increasing PAGE_SIZE
+	// blocks.
 	size_t min = (size_t)PAGE_SIZE << mmap_step/2;
-	if (n < min) n = min;
+	n = n < min ? min : n;
+
 	void *area = mmap(0, n, PROT_READ|PROT_WRITE,
 			  MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
-	if (area == MAP_FAILED) return 0;
+	if (area == MAP_FAILED)
+		return NULL;
+
 	*pn = n;
 	mmap_step++;
 	return area;
@@ -139,32 +163,33 @@ static struct chunk *expand_heap(size_t n)
 	void *p;
 	struct chunk *w;
 
-	/* The argument n already accounts for the caller's chunk
-	 * overhead needs, but if the heap can't be extended in-place,
-	 * we need room for an extra zero-sized sentinel chunk. */
+	// The argument n already accounts for the caller's chunk overhead
+	// needs, but if the heap can't be extended in-place, we need room for
+	// an extra zero-sized sentinel chunk.
 	n += SIZE_ALIGN;
 
 	p = __expand_heap(&n);
-	if (!p) return 0;
+	if (p == NULL)
+		return NULL;
 
-	/* If not just expanding existing space, we need to make a
-	 * new sentinel chunk below the allocated space. */
+	// If not just expanding existing space, we need to make a
+	// new sentinel chunk below the allocated space.
 	if (p != end) {
-		/* Valid/safe because of the prologue increment. */
+		// Valid/safe because of the prologue increment.
 		n -= SIZE_ALIGN;
 		p = (char *)p + SIZE_ALIGN;
 		w = MEM_TO_CHUNK(p);
 		w->psize = 0 | C_INUSE;
 	}
 
-	/* Record new heap end and fill in footer. */
+	// Record new heap end and fill in footer.
 	end = (char *)p + n;
 	w = MEM_TO_CHUNK(end);
 	w->psize = n | C_INUSE;
 	w->csize = 0 | C_INUSE;
 
-	/* Fill in header, which may be new or may be replacing a
-	 * zero-size sentinel header at the old end-of-heap. */
+	// Fill in header, which may be new or may be replacing a
+	// zero-size sentinel header at the old end-of-heap.
 	w = MEM_TO_CHUNK(p);
 	w->csize = n | C_INUSE;
 
@@ -173,7 +198,7 @@ static struct chunk *expand_heap(size_t n)
 
 static int adjust_size(size_t *n)
 {
-	/* Result of pointer difference must fit in ptrdiff_t. */
+	// Result of pointer difference must fit in ptrdiff_t.
 	if (*n-1 > PTRDIFF_MAX - SIZE_ALIGN - PAGE_SIZE) {
 		if (*n) {
 			errno = ENOMEM;
@@ -213,7 +238,8 @@ static void trim(struct chunk *self, size_t n)
 	size_t n1 = CHUNK_SIZE(self);
 	struct chunk *next, *split;
 
-	if (n >= n1 - DONTCARE) return;
+	if (n >= n1 - DONTCARE)
+		return;
 
 	next = NEXT_CHUNK(self);
 	split = (void *)((char *)self + n);
@@ -237,13 +263,15 @@ void *musl_malloc(size_t n)
 	int i, j;
 	uint64_t mask;
 
-	if (adjust_size(&n) < 0) return 0;
+	if (adjust_size(&n) < 0)
+		return NULL;
 
 	if (n > MMAP_THRESHOLD) {
 		size_t len = align64_up(n + OVERHEAD, PAGE_SIZE);
 		char *base = mmap(0, len, PROT_READ|PROT_WRITE,
 				  MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
-		if (base == (void *)-1) return 0;
+		if (base == (void *)-1)
+			return NULL;
 		c = (void *)(base + SIZE_ALIGN - OVERHEAD);
 		c->csize = len - (SIZE_ALIGN - OVERHEAD);
 		c->psize = SIZE_ALIGN - OVERHEAD;
@@ -273,11 +301,11 @@ void *musl_malloc(size_t n)
 		}
 		unlock_bin(j);
 	}
-	if (!mask) {
+	if (mask == 0) {
 		c = expand_heap(n);
 		if (!c) {
 			unlock(mal.split_merge_lock);
-			return 0;
+			return NULL;
 		}
 	}
 	trim(c, n);
@@ -307,6 +335,7 @@ void __bin_chunk(struct chunk *self)
 		lock_bin(i);
 		if (!(self->psize & C_INUSE)) {
 			struct chunk *prev = PREV_CHUNK(self);
+
 			unbin(prev, i);
 			self = prev;
 			size += psize;
@@ -315,6 +344,7 @@ void __bin_chunk(struct chunk *self)
 	}
 	if (nsize) {
 		int i = bin_index(nsize);
+
 		lock_bin(i);
 		if (!(next->csize & C_INUSE)) {
 			unbin(next, i);
@@ -338,7 +368,7 @@ void __bin_chunk(struct chunk *self)
 		uintptr_t b = (uintptr_t)align64((uint64_t)self - SIZE_ALIGN, PAGE_SIZE);
 
 		int e = errno;
-		madvise((void *)a, b-a, MADV_DONTNEED);
+		madvise((void *)a, b - a, MADV_DONTNEED);
 		errno = e;
 	}
 
