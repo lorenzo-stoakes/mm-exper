@@ -70,5 +70,19 @@ static inline uint64_t clear_lowest_bit(uint64_t value)
 	return value - lowest_bit_only;
 }
 
+/*
+ * Determine whether `a` and `b` share the highest bit.
+ *
+ * e.g.:
+ *   share_highest_bit(0b1100, 0b1000) == true
+ *   share_highest_bit(0b0100, 0b1000) == false
+ */
+static inline bool share_highest_bit(uint64_t a, uint64_t b)
+{
+	// The only way this can be true is if the highest bit is shared and
+	// thus zeroed.
+	return (a ^ b) <= b; // Should be equivalent to <= a also.
+}
+
 #undef ALIGN_UP_IMPL_1
 #undef ALIGN_UP_IMPL_2
