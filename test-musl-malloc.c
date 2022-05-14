@@ -17,11 +17,11 @@ int main(void)
 		size += rand() % size;
 
 		ptrs[i] = musl_malloc(size);
+		musl_dump_bins();
 	}
 
 	for (size_t i = 0; i < NUM_ALLOCS; i++) {
 		musl_free(ptrs[i]);
-
 		musl_dump_bins();
 	}
 
