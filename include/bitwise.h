@@ -59,5 +59,16 @@ static inline uint64_t mask_high_bits(uint64_t value, uint64_t bit)
 	return value & -(1UL << bit);
 }
 
+// Clear the lowest bit of a value (or do nothing if zero).
+static inline uint64_t clear_lowest_bit(uint64_t value)
+{
+	// Two's complement means this is equivalent to value & (~value + 1)
+	// meaning the lowest _unset_ bit in the complemented version is flipped
+	// which becomes the only bit that &'s with a set bit in `value`.
+	const uint64_t lowest_bit_only = value & -value;
+
+	return value - lowest_bit_only;
+}
+
 #undef ALIGN_UP_IMPL_1
 #undef ALIGN_UP_IMPL_2
