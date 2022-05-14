@@ -46,7 +46,9 @@ static struct {
 
 void musl_dump_bins(void)
 {
-	pr_dbg("allocated = %lu, free = %lu, heap size = %lu, free blocks = %lu, mmaps = %lu, reclaimed = %lu",
+	puts("\n=== STATS ===\n");
+
+	printf("allocated = %lu, free = %lu, heap size = %lu, free blocks = %lu, mmaps = %lu, reclaimed = %lu\n",
 	       stats.allocated_bytes, stats.free_bytes, stats.heap_bytes, stats.free_block_bytes, stats.mmap_bytes,
 		stats.reclaimed_bytes);
 
@@ -67,6 +69,8 @@ void musl_dump_bins(void)
 		}
 		printf("\n");
 	}
+
+	puts("\n=============\n");
 }
 
 static void crash(void)
@@ -503,6 +507,9 @@ void *musl_malloc(size_t n)
 
 void __bin_chunk(struct chunk *self)
 {
+	stats.allocated_bytes -= CHUNK_SIZE(self);
+	stats.free_bytes += CHUNK_SIZE(self);
+
 	struct chunk *next = NEXT_CHUNK(self);
 
 	pr_dbg_chunk("    | freeing chunk", self);
@@ -593,6 +600,8 @@ void __bin_chunk(struct chunk *self)
 
 static void unmap_chunk(struct chunk *self)
 {
+	stats.allocated_bytes -= CHUNK_SIZE(self);
+
 	size_t extra = self->psize;
 	char *base = (char *)self - extra;
 	size_t len = CHUNK_SIZE(self) + extra;
@@ -602,6 +611,8 @@ static void unmap_chunk(struct chunk *self)
 	int e = errno;
 	munmap(base, len);
 	errno = e;
+
+	stats.mmap_bytes -= len;
 }
 
 void musl_free(void *p)
