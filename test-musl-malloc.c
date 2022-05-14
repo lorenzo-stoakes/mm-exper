@@ -21,6 +21,8 @@ int main(void)
 
 	for (size_t i = 0; i < NUM_ALLOCS; i++) {
 		musl_free(ptrs[i]);
+
+		musl_dump_bins();
 	}
 
 	return EXIT_SUCCESS;

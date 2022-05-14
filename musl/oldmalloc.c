@@ -34,6 +34,41 @@ static struct {
 	volatile int split_merge_lock[2];
 } mal;
 
+static struct {
+	uint64_t allocated_bytes;
+	uint64_t free_bytes;
+
+	uint64_t heap_bytes;
+	uint64_t free_block_bytes;
+	uint64_t mmap_bytes;
+	uint64_t reclaimed_bytes;
+} stats;
+
+void musl_dump_bins(void)
+{
+	pr_dbg("allocated = %lu, free = %lu, heap size = %lu, free blocks = %lu, mmaps = %lu, reclaimed = %lu",
+	       stats.allocated_bytes, stats.free_bytes, stats.heap_bytes, stats.free_block_bytes, stats.mmap_bytes,
+		stats.reclaimed_bytes);
+
+	for (int i = 0; i < 64; i++) {
+		if (!is_bit_set(mal.binmap, i) || mal.bins[i].head == BIN_TO_CHUNK(i))
+			continue;
+
+		printf("%02d: ", i);
+
+		for (struct chunk *curr = mal.bins[i].head; curr != BIN_TO_CHUNK(i); curr = curr->next) {
+			// I mean, this shouldn't be possible should it?
+			if (curr->csize & C_INUSE)
+				continue;
+
+			const size_t num_aligns = curr->csize / SIZE_ALIGN;
+
+			printf("%lu ", num_aligns);
+		}
+		printf("\n");
+	}
+}
+
 static void crash(void)
 {
 	fprintf(stderr, "FATAL ERROR\n");
