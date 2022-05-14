@@ -295,13 +295,16 @@ static void bin_chunk(struct chunk *self, int i)
 		mal.binmap |= (1UL << i);
 }
 
+// Trim a chunk down to the actaully used size.
 static void trim(struct chunk *self, size_t n)
 {
 	size_t n1 = CHUNK_SIZE(self);
 	struct chunk *next, *split;
 
-	if (n >= n1 - DONTCARE)
+	if (n1 - n <= DONTCARE) {
+		pr_dbg("      | delta %lu so small we will not TRIM", n1 - n);
 		return;
+	}
 
 	next = NEXT_CHUNK(self);
 	split = (void *)((char *)self + n);
@@ -313,6 +316,11 @@ static void trim(struct chunk *self, size_t n)
 
 	int i = bin_index(n1 - n);
 	lock_bin(i);
+
+	pr_dbg("      | TRIMmed chunk (size %lu [%lu]) from retrieved chunk (size %lu [%lu], binindex %d) ",
+	       n, n / SIZE_ALIGN, n1, n1 / SIZE_ALIGN, bin_index(n1));
+	pr_dbg("      | TRIMmed free block (size %lu [%lu]) reinserted into binindex %d",
+	       split->csize, split->csize / SIZE_ALIGN, i);
 
 	bin_chunk(split, i);
 
@@ -390,11 +398,12 @@ void *musl_malloc(size_t n)
 	}
 
 	if (mask == 0) {
+		pr_dbg("    | SLOWEST PATH expanding heap");
 		c = expand_heap(n);
 
-		pr_dbg_chunk("    | SLOWEST PATH expanded heap", c);
-
-		if (!c) {
+		if (c != NULL) {
+			pr_dbg_chunk("      | got", c);
+		} else {
 			pr_dbg("    | FAILURE could not expand heap");
 
 			unlock(mal.split_merge_lock);
@@ -403,6 +412,10 @@ void *musl_malloc(size_t n)
 	}
 	trim(c, n);
 	unlock(mal.split_merge_lock);
+
+	pr_dbg_chunk("    | returning", c);
+	void *ret = CHUNK_TO_MEM(c);
+		pr_dbg("    | (returned ptr %p)", ret);
 	return CHUNK_TO_MEM(c);
 }
 
