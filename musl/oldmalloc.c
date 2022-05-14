@@ -111,11 +111,10 @@ static void *__expand_heap(size_t *pn)
 		errno = ENOMEM;
 		return 0;
 	}
-	n += -n & PAGE_SIZE-1;
+	n = align64_up(n, PAGE_SIZE);
 
 	if (!stored_brk) {
-		stored_brk = sbrk(0);
-		stored_brk += -stored_brk & PAGE_SIZE-1;
+		stored_brk = align64_up(sbrk(0), PAGE_SIZE);
 	}
 
 	if (n < SIZE_MAX - stored_brk && sbrk(n) >= 0) {
@@ -184,7 +183,8 @@ static int adjust_size(size_t *n)
 			return 0;
 		}
 	}
-	*n = (*n + OVERHEAD + SIZE_ALIGN - 1) & SIZE_MASK;
+
+	*n = align64_up(*n + OVERHEAD, SIZE_ALIGN);
 	return 0;
 }
 
@@ -240,7 +240,7 @@ void *musl_malloc(size_t n)
 	if (adjust_size(&n) < 0) return 0;
 
 	if (n > MMAP_THRESHOLD) {
-		size_t len = n + OVERHEAD + PAGE_SIZE - 1 & -PAGE_SIZE;
+		size_t len = align64_up(n + OVERHEAD, PAGE_SIZE);
 		char *base = mmap(0, len, PROT_READ|PROT_WRITE,
 				  MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
 		if (base == (void *)-1) return 0;
@@ -334,8 +334,9 @@ void __bin_chunk(struct chunk *self)
 
 	/* Replace middle of large chunks with fresh zero pages */
 	if (size > RECLAIM && (size^(size-osize)) > size-osize) {
-		uintptr_t a = (uintptr_t)self + SIZE_ALIGN+PAGE_SIZE-1 & -PAGE_SIZE;
-		uintptr_t b = (uintptr_t)next - SIZE_ALIGN & -PAGE_SIZE;
+		uintptr_t a = (uintptr_t)align64_up((uint64_t)self + SIZE_ALIGN, PAGE_SIZE);
+		uintptr_t b = (uintptr_t)align64((uint64_t)self - SIZE_ALIGN, PAGE_SIZE);
+
 		int e = errno;
 		madvise((void *)a, b-a, MADV_DONTNEED);
 		errno = e;
