@@ -417,7 +417,7 @@ void __bin_chunk(struct chunk *self)
 	size_t psize = self->psize & C_INUSE ? 0 : CHUNK_PSIZE(self);
 	size_t nsize = next->csize & C_INUSE ? 0 : CHUNK_SIZE(next);
 
-	if (psize) {
+	if (psize > 0) {
 		int i = bin_index(psize);
 		lock_bin(i);
 		if (!(self->psize & C_INUSE)) {
@@ -429,7 +429,8 @@ void __bin_chunk(struct chunk *self)
 		}
 		unlock_bin(i);
 	}
-	if (nsize) {
+
+	if (nsize > 0) {
 		int i = bin_index(nsize);
 
 		lock_bin(i);
