@@ -44,7 +44,7 @@ static inline void unlock(volatile int *lk)
 	*/
 }
 
-static void a_crash(void)
+static void crash(void)
 {
 	fprintf(stderr, "FATAL ERROR\n");
 	abort();
@@ -288,8 +288,9 @@ void __bin_chunk(struct chunk *self)
 {
 	struct chunk *next = NEXT_CHUNK(self);
 
-	/* Crash on corrupted footer (likely from buffer overflow) */
-	if (next->psize != self->csize) a_crash();
+	// Crash on corrupted footer (likely from buffer overflow).
+	if (next->psize != self->csize)
+		crash();
 
 	lock(mal.split_merge_lock);
 
@@ -347,8 +348,9 @@ static void unmap_chunk(struct chunk *self)
 	size_t extra = self->psize;
 	char *base = (char *)self - extra;
 	size_t len = CHUNK_SIZE(self) + extra;
-	/* Crash on double free */
-	if (extra & 1) a_crash();
+	// Crash on double free.
+	if (extra & 1)
+		crash();
 	int e = errno;
 	munmap(base, len);
 	errno = e;
