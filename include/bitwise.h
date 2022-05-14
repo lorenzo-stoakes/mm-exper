@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #define ALIGN_UP_IMPL_2
@@ -39,6 +40,12 @@ static inline uint64_t align64_up(uint64_t value, uint64_t align_to)
 #else
 #error align64_up() implementation not specified.
 #endif
+}
+
+// Determine whether the specified bit is set in the specified value.
+static inline bool is_bit_set(uint64_t value, uint64_t bit)
+{
+	return !!(value & (1UL << bit));
 }
 
 #undef ALIGN_UP_IMPL_1
