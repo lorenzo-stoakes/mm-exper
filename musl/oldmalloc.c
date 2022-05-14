@@ -364,7 +364,7 @@ void *musl_malloc(size_t n)
 		unlock_bin(i);
 	}
 	lock(mal.split_merge_lock);
-	for (mask = mal.binmap & -(1ULL<<i); mask; mask -= (mask&-mask)) {
+	for (mask = mask_high_bits(mal.binmap, i); mask; mask -= (mask&-mask)) {
 		j = first_set(mask);
 		lock_bin(j);
 		c = mal.bins[j].head;
