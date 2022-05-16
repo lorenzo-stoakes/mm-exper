@@ -20,9 +20,9 @@
 #ifdef DEBUG_OUTPUT
 #define pr_dbg(fmt, ...) printf("debug: " __FILE__ ": %d: " fmt "\n", __LINE__, ## __VA_ARGS__)
 #define pr_dbg_chunk(preface, chunk) pr_dbg("%s: chunk[ptr=%p, psize=%lu [%lu]%s, csize=%lu [%lu]%s]", preface, chunk, \
-					    chunk->psize & -2, CHUNK_PSIZE(chunk) / SIZE_ALIGN, \
+					    CHUNK_PSIZE(chunk), CHUNK_PSIZE(chunk) / SIZE_ALIGN, \
 					    chunk->psize & 1 ? " (used)" : "", \
-					    chunk->csize & -2, CHUNK_SIZE(chunk) / SIZE_ALIGN, \
+					    CHUNK_SIZE(chunk), CHUNK_SIZE(chunk) / SIZE_ALIGN, \
 					    chunk->csize & 1 ? " (used)" : "")
 #else
 #define pr_dbg(...)
