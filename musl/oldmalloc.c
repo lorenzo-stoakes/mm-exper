@@ -156,6 +156,17 @@ static int first_set(uint64_t x)
  *
  * How bin_index() and bin_index_up() SIZE_ALIGN counts map to bin indexes:
  *
+ * Counts per block size:
+ * For <= 32 -> 1 per index.
+ * For 2^5  < size <= 2^6  : 8    (2^3),
+ * For 2^6  < size <= 2^7  : 16   (2^4),
+ * For 2^7  < size <= 2^8  : 32   (2^5),
+ * For 2^8  < size <= 2^9  : 64   (2^6),
+ * For 2^9  < size <= 2^10 : 128  (2^7),
+ * For 2^10 < size <= 2^11 : 256  (2^8),
+ * For 2^11 < size <= 2^12 : 512  (2^9),
+ * For 2^12 < size <= ...  : 1024 (2^10),
+ *
  * i  bin_index    bin_index_up count
  *  0 | 1          | 1          | 1
  *  1 | 2          | 2          | 1
