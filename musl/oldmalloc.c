@@ -1,7 +1,6 @@
 #define _GNU_SOURCE
 
 #include "bitwise.h"
-#include "malloc_impl.h"
 
 #include <errno.h>
 #include <limits.h>
