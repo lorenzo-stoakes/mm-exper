@@ -11,18 +11,26 @@
 
 #define INVALID_VALUE (~(uint64_t)0)
 
-// Obtain a mask for lower bits below `_n`.
-#define BIT_MASK(_n) ((1UL << _n) - 1)
+// Obtain a mask with `_bit` set.
+#define BIT_MASK(_bit) (1UL << _bit)
+// Obtain a mask for lower bits below `_bit`.
+#define BIT_MASK_LOWER(_bit) (BIT_MASK(_bit) - 1)
 // Dance to allow us to get a string of a macro value.
 #define STRINGIFY(_x) STRINGIFY2(_x)
 #define STRINGIFY2(_x) #_x
 
-// Determine whether `bit` is set in `val`.
-static inline bool check_bit(uint64_t val, uint64_t bit)
-{
-	const uint64_t mask = 1UL << bit;
-	return (val & mask) == mask;
-}
+
+// As per https://www.kernel.org/doc/Documentation/vm/pagemap.txt:
+
+// Indicates page swapped out.
+#define PAGEMAP_SWAPPED_BIT (62)
+// Indicates page is present.
+#define PAGEMAP_PRESENT_BIT (63)
+// 'Bits 0-54  page frame number (PFN) if present'
+#define PAGEMAP_PFN_NUM_BITS (55)
+#define PAGEMAP_PFN_MASK BIT_MASK_LOWER(PAGEMAP_PFN_NUM_BITS)
+
+#define CHECK_BIT(_val, _bit) ((_val & BIT_MASK(_bit)) == BIT_MASK(_bit))
 
 // Read a single uint64 from the specified path at the specified offset.
 static uint64_t read_u64(const char *path, uint64_t offset)
@@ -67,9 +75,9 @@ done_close:
 // If unable to retrieve, returns INVALID_VALUE.
 static uint64_t read_pagemap(const void *ptr)
 {
+	const uint64_t virt_page_num = (uint64_t)ptr / getpagesize();
 	// There is 'one 64-bit value for each virtual page'.
-	const uint64_t page_num = (uint64_t)ptr / getpagesize();
-	const uint64_t offset = page_num * sizeof(uint64_t);
+	const uint64_t offset = virt_page_num * sizeof(uint64_t);
 
 	return read_u64("/proc/self/pagemap", offset);
 }
@@ -83,9 +91,17 @@ static uint64_t get_pfn(const void *ptr)
 	if (val == INVALID_VALUE)
 		return INVALID_VALUE;
 
-	// As per https://www.kernel.org/doc/Documentation/vm/pagemap.txt
-	// 'Bits 0-54  page frame number (PFN) if present'
-	return val & BIT_MASK(54);
+	if (CHECK_BIT(val, PAGEMAP_SWAPPED_BIT)) {
+		fprintf(stderr, "%p: physical page swapped out!", ptr);
+		return INVALID_VALUE;
+	}
+
+	if (!CHECK_BIT(val, PAGEMAP_PRESENT_BIT)) {
+		fprintf(stderr, "%p: physical page not present.", ptr);
+		return INVALID_VALUE;
+	}
+
+	return val & PAGEMAP_PFN_MASK;
 }
 
 // Retrieves kpageflags as described at
@@ -100,10 +116,11 @@ static uint64_t get_kpageflags(uint64_t pfn)
 // Output all set flags from the specified kpageflags value.
 static void print_kpageflags(uint64_t flags)
 {
-#define CHECK_FLAG(flag) \
-	if ((flags & (1UL << KPF_##flag)) == (1UL << KPF_##flag))	\
+#define CHECK_FLAG(flag)			\
+	if (CHECK_BIT(flags, KPF_##flag))	\
 		printf(STRINGIFY(flag) " ");
 
+	// Alphabetical order.
 	CHECK_FLAG(ACTIVE);
 	CHECK_FLAG(ANON);
 	CHECK_FLAG(BUDDY);
@@ -132,13 +149,12 @@ static void print_kpageflags(uint64_t flags)
 	CHECK_FLAG(WRITEBACK);
 	CHECK_FLAG(ZERO_PAGE);
 
-	printf("\n");
 #undef CHECK_FLAG
 }
 
 // Print kpageflags for the page containing the specified pointer.
 // Return value indicates whether succeeded.
-static bool print_kpageflags_ptr(const void *ptr)
+static bool print_kpageflags_ptr(const void *ptr, const char *descr)
 {
 	const uint64_t pfn = get_pfn(ptr);
 	if (pfn == INVALID_VALUE) {
@@ -154,7 +170,9 @@ static bool print_kpageflags_ptr(const void *ptr)
 		return false;
 	}
 
+	printf("%p: ", ptr);
 	print_kpageflags(kpf);
+	printf(" [%s]\n", descr);
 
 	return true;
 }
@@ -163,18 +181,33 @@ int main(void)
 {
 	// First allocate a page of memory from the kernel, force _actual_
 	// allocation via MAP_POPULATE.
-	const void *ptr = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
-			       MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
+	void *ptr = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
+			 MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
 
 	if (ptr == MAP_FAILED) {
 		perror("mmap");
 		return EXIT_FAILURE;
 	}
 
-	if (!print_kpageflags_ptr(ptr))
+	if (!print_kpageflags_ptr(ptr, "initial mmap"))
+		return EXIT_FAILURE;
+
+	// Do something with the page.
+	memset(ptr, 123, 4096);
+
+	if (!print_kpageflags_ptr(ptr, "modified page"))
 		return EXIT_FAILURE;
 
 	munmap((void *)ptr, 4096);
+
+	void *ptr2 = malloc(4096);
+	if (!print_kpageflags_ptr(ptr2, "initial malloc"))
+		return EXIT_FAILURE;
+
+	memset(ptr2, 123, 4096);
+
+	if (!print_kpageflags_ptr(ptr2, "modified malloc"))
+		return EXIT_FAILURE;
 
 	return EXIT_SUCCESS;
 }
