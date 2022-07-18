@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -18,7 +19,6 @@
 // Dance to allow us to get a string of a macro value.
 #define STRINGIFY(_x) STRINGIFY2(_x)
 #define STRINGIFY2(_x) #_x
-
 
 // As per https://www.kernel.org/doc/Documentation/vm/pagemap.txt:
 
@@ -92,12 +92,12 @@ static uint64_t get_pfn(const void *ptr)
 		return INVALID_VALUE;
 
 	if (CHECK_BIT(val, PAGEMAP_SWAPPED_BIT)) {
-		fprintf(stderr, "%p: physical page swapped out!", ptr);
+		fprintf(stderr, "%p: physical page swapped out!\n", ptr);
 		return INVALID_VALUE;
 	}
 
 	if (!CHECK_BIT(val, PAGEMAP_PRESENT_BIT)) {
-		fprintf(stderr, "%p: physical page not present.", ptr);
+		fprintf(stderr, "%p: physical page not present\n", ptr);
 		return INVALID_VALUE;
 	}
 
@@ -198,7 +198,7 @@ int main(void)
 	if (!print_kpageflags_ptr(ptr, "modified page"))
 		return EXIT_FAILURE;
 
-	munmap((void *)ptr, 4096);
+	munmap(ptr, 4096);
 
 	void *ptr2 = malloc(4096);
 	if (!print_kpageflags_ptr(ptr2, "initial malloc"))
@@ -208,6 +208,37 @@ int main(void)
 
 	if (!print_kpageflags_ptr(ptr2, "modified malloc"))
 		return EXIT_FAILURE;
+
+	int fd = open("test.txt", O_RDWR);
+	if (fd == -1) {
+		perror("open test.txt");
+		return EXIT_FAILURE;
+	}
+
+	char *ptr3 = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
+			  MAP_SHARED | MAP_POPULATE, fd, 0);
+	// We can discard the fd now we've mmap'd it.
+	close(fd);
+
+	if (ptr3 == MAP_FAILED) {
+		perror("mmap test.txt");
+		return EXIT_FAILURE;
+	}
+
+	if (!print_kpageflags_ptr(ptr3, "mmap file"))
+		return EXIT_FAILURE;
+
+	ptr3[0] = 'Z';
+
+	if (!print_kpageflags_ptr(ptr3, "mmap modified file"))
+		return EXIT_FAILURE;
+
+	madvise(ptr3, 4096, MADV_COLD);
+
+	if (!print_kpageflags_ptr(ptr3, "mmap modified, cold file"))
+		return EXIT_FAILURE;
+
+	munmap(ptr3, 4096);
 
 	return EXIT_SUCCESS;
 }
