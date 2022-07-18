@@ -10,6 +10,18 @@
 
 #include "linux/kernel-page-flags.h"
 
+// Imported from include/linux/kernel-page-flags.h
+#define KPF_RESERVED		32
+#define KPF_MLOCKED		33
+#define KPF_MAPPEDTODISK	34
+#define KPF_PRIVATE		35
+#define KPF_PRIVATE_2		36
+#define KPF_OWNER_PRIVATE	37
+#define KPF_ARCH		38
+#define KPF_UNCACHED		39
+#define KPF_SOFTDIRTY		40
+#define KPF_ARCH_2		41
+
 #define INVALID_VALUE (~(uint64_t)0)
 
 // Obtain a mask with `_bit` set.
@@ -148,6 +160,16 @@ static void print_kpageflags(uint64_t flags)
 	CHECK_FLAG(UPTODATE);
 	CHECK_FLAG(WRITEBACK);
 	CHECK_FLAG(ZERO_PAGE);
+	CHECK_FLAG(RESERVED);
+	CHECK_FLAG(MLOCKED);
+	CHECK_FLAG(MAPPEDTODISK);
+	CHECK_FLAG(PRIVATE);
+	CHECK_FLAG(PRIVATE_2);
+	CHECK_FLAG(OWNER_PRIVATE);
+	CHECK_FLAG(ARCH);
+	CHECK_FLAG(UNCACHED);
+	CHECK_FLAG(SOFTDIRTY);
+	CHECK_FLAG(ARCH_2);
 
 #undef CHECK_FLAG
 }
