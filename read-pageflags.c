@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include "linux/kernel-page-flags.h"
@@ -261,6 +262,28 @@ int main(void)
 		return EXIT_FAILURE;
 
 	munmap(ptr3, 4096);
+
+	char *ptr4 = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
+			  MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
+	if (ptr4 == MAP_FAILED) {
+		perror("mmap (4)");
+		return EXIT_FAILURE;
+	}
+
+	ptr4[0] = 'x';
+
+	pid_t p = fork();
+	if (p == 0) {
+		print_kpageflags_ptr(ptr4, "mmap anon, forked");
+
+		ptr4[0] = 'y';
+		print_kpageflags_ptr(ptr4, "mmap anon, forked, modified (pre-sleep)");
+		sleep(1);
+		print_kpageflags_ptr(ptr4, "mmap anon, forked, modified (after sleep)");
+
+		return EXIT_SUCCESS;
+	}
+	wait(NULL);
 
 	return EXIT_SUCCESS;
 }
