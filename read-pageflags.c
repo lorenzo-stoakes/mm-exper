@@ -285,5 +285,19 @@ int main(void)
 	}
 	wait(NULL);
 
+	fd = open("test.txt", O_RDWR);
+	if (fd == -1) {
+		perror("open test.txt");
+		return EXIT_FAILURE;
+	}
+
+	char *ptr5 = mmap(NULL, 4097, PROT_READ | PROT_WRITE,
+			  MAP_SHARED | MAP_POPULATE, fd, 0);
+
+	close(fd);
+
+	print_kpageflags_ptr(ptr5, "mmap file page 1, all bytes");
+	print_kpageflags_ptr(ptr5 + 4096, "mmap file page 2, all bytes");
+
 	return EXIT_SUCCESS;
 }
