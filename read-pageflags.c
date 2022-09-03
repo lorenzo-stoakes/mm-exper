@@ -175,6 +175,33 @@ static void print_kpageflags(uint64_t flags)
 #undef CHECK_FLAG
 }
 
+// If kernel module has provided a refcount reader, use it.
+static int get_refcount(uint64_t pfn)
+{
+	FILE *fp = fopen("/dev/refcount", "r+");
+	if (fp == NULL)
+		return -1;
+
+	if (fprintf(fp, "%lu\n", pfn) < 0) {
+		perror("writing to /dev/refcount");
+		exit(1);
+	}
+
+	fflush(fp);
+	fclose(fp);
+
+	fp = fopen("/dev/refcount", "r");
+
+	int ret = 0;
+	if (fscanf(fp, "%d", &ret) < 0) {
+		perror("reading from /dev/refcount");
+		exit(1);
+	}
+	fclose(fp);
+
+	return ret;
+}
+
 // Print kpageflags for the page containing the specified pointer.
 // Return value indicates whether succeeded.
 static bool print_kpageflags_ptr(const void *ptr, const char *descr)
@@ -195,6 +222,11 @@ static bool print_kpageflags_ptr(const void *ptr, const char *descr)
 
 	printf("%p: ", ptr);
 	print_kpageflags(kpf);
+
+	const int refcount = get_refcount(pfn);
+	if (refcount != -1)
+		printf("refcount=%d", refcount);
+
 	printf(" [%s]\n", descr);
 
 	return true;

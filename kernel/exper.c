@@ -30,7 +30,7 @@ static ssize_t refcount_write_(struct file *file, const char __user *in,
 	char pfn_buf[255];
 	uint64_t pfn;
 	ssize_t count;
-	int ref_count;
+	int refcount;
 	struct page *pg;
 
 	count = simple_write_to_buffer(pfn_buf, 254, off, in, size);
@@ -45,8 +45,8 @@ static ssize_t refcount_write_(struct file *file, const char __user *in,
 	if (pg == NULL)
 		return -EINVAL;
 
-	ref_count = page_ref_count(pg);
-	refcount_buf_size = snprintf(refcount_buf, 255, "%d", ref_count) + 1;
+	refcount = page_ref_count(pg);
+	refcount_buf_size = snprintf(refcount_buf, 255, "%d", refcount) + 1;
 
 	*off = size;
 	return size;
