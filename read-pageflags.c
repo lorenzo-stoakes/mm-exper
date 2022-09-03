@@ -329,6 +329,8 @@ int main(void)
 
 	ptr4[0] = 'x';
 
+	print_kpageflags_virt(ptr4, "mmap anon, pre-fork");
+
 	pid_t p = fork();
 	if (p == 0) {
 		print_kpageflags_virt(ptr4, "mmap anon, forked");
