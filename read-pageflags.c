@@ -172,7 +172,15 @@ static void print_kpageflags(uint64_t flags)
 	CHECK_FLAG(ZERO_PAGE);
 	CHECK_FLAG(RESERVED);
 	CHECK_FLAG(MLOCKED);
-	CHECK_FLAG(MAPPEDTODISK);
+
+	// Handle overloaded flag.
+	if (CHECK_BIT(flags, KPF_MAPPEDTODISK)) {
+		if (CHECK_BIT(flags, KPF_ANON))
+			printf("ANON_EXCLUSIVE ");
+		else
+			printf("MAPPEDTODISK ");
+	}
+
 	CHECK_FLAG(PRIVATE);
 	CHECK_FLAG(PRIVATE_2);
 	CHECK_FLAG(OWNER_PRIVATE);
@@ -180,7 +188,6 @@ static void print_kpageflags(uint64_t flags)
 	CHECK_FLAG(UNCACHED);
 	CHECK_FLAG(SOFTDIRTY);
 	CHECK_FLAG(ARCH_2);
-
 #undef CHECK_FLAG
 }
 
