@@ -221,11 +221,13 @@ static bool print_kpageflags_ptr(const void *ptr, const char *descr)
 	}
 
 	printf("%p: ", ptr);
-	print_kpageflags(kpf);
+	printf("pfn=%lu: ", pfn);
 
 	const int refcount = get_refcount(pfn);
 	if (refcount != -1)
-		printf("refcount=%d", refcount);
+		printf("refcount=%d ", refcount);
+
+	print_kpageflags(kpf);
 
 	printf(" [%s]\n", descr);
 
