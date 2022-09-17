@@ -358,5 +358,25 @@ int main(void)
 	print_kpageflags_virt(ptr5, "mmap file page 1, all bytes");
 	print_kpageflags_virt(ptr5 + 4096, "mmap file page 2, all bytes");
 
+	char *ptr6 = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
+			  MAP_SHARED | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
+	if (ptr6 == MAP_FAILED) {
+		perror("mmap (6)");
+		return EXIT_FAILURE;
+	}
+	print_kpageflags_virt(ptr6, "mmap anon, shared");
+
+	pid_t p2 = fork();
+	if (p2 == 0) {
+		ptr6[0] = 'x';
+
+		print_kpageflags_virt(ptr6, "mmap anon, shared, post fork");
+
+		return EXIT_SUCCESS;
+	}
+	wait(NULL);
+	print_kpageflags_virt(ptr6, "mmap anon, shared, post fork done");
+
+
 	return EXIT_SUCCESS;
 }
