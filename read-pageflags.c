@@ -337,8 +337,16 @@ int main(void)
 
 		ptr4[0] = 'y';
 		print_kpageflags_virt(ptr4, "mmap anon, forked, modified (pre-sleep)");
+
 		sleep(1);
 		print_kpageflags_virt(ptr4, "mmap anon, forked, modified (after sleep)");
+
+		if (ptr4[0] == 'y')
+			ptr4[0] = 'x';
+
+		sleep(1);
+
+		print_kpageflags_virt(ptr4, "IVG: mmap anon, forked, modified (after sleep, modify)");
 
 		return EXIT_SUCCESS;
 	}
