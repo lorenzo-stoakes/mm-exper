@@ -25,12 +25,10 @@ struct memstat {
 
 	// Page table/phys page information.
 	uint64_t *pagemaps;
-	uint64_t *pagecounts;
+	uint64_t *kpagecounts;
 	uint64_t *kpageflags;
 };
 
-// Quick one-line summary to stdout.
-void memstat_print_short(struct memstat *mstat);
 // Detailed information to stdout.
 void memstat_print(struct memstat *mstat);
 
