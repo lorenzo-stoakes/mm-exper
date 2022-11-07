@@ -288,6 +288,7 @@ static bool get_pagetable_fields(struct memstat *mstat)
 		if (pfn == INVALID_VALUE)
 			continue;
 
+		// These can be set to INVALID_VALUE which we will check later.
 		mstat->kpagecounts[i] = read_u64("/proc/kpagecount", pfn, false);
 		mstat->kpageflags[i] = read_u64("/proc/kpageflags", pfn, false);
 	}
@@ -389,9 +390,16 @@ static void print_mapping(struct memstat *mstat, uint64_t index)
 		printf("swap_type=[%lx] ", val & PAGEMAP_SWAP_TYPE_MASK);
 		printf("swap_offset=[%lx] ", offset & PAGEMAP_SWAP_OFFSET_MASK);
 	}  else if (have_pfn) {
+		const uint64_t flags = mstat->kpageflags[index];
+		const uint64_t count = mstat->kpagecounts[index];
+
 		printf("pfn=[%lx] ", pfn);
-		print_kpageflags(mstat->kpageflags[index]);
-		printf("mapcount=[%lu]", mstat->kpagecounts[index]);
+
+		if (flags != INVALID_VALUE)
+			print_kpageflags(flags);
+
+		if (count != INVALID_VALUE)
+			printf("mapcount=[%lu]", count);
 	}
 
 	printf("\n");
