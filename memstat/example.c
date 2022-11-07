@@ -22,9 +22,12 @@ int main(void)
 	mstat_after = memstat_snapshot((uint64_t)ptr);
 
 	memstat_print_diff(mstat_before, mstat_after);
+	memstat_free(mstat_before);
+	memstat_free(mstat_after);
 
 	if (munmap(ptr, 20000) != 0) {
 		perror("munmap");
+
 		return EXIT_FAILURE;
 	}
 
