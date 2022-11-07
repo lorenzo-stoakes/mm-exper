@@ -1,5 +1,20 @@
 #include "memstat.h"
 
+#include "linux/kernel-page-flags.h"
+
+// Imported from include/linux/kernel-page-flags.h
+#define KPF_RESERVED		32
+#define KPF_MLOCKED		33
+#define KPF_MAPPEDTODISK	34
+#define KPF_PRIVATE		35
+#define KPF_PRIVATE_2		36
+#define KPF_OWNER_PRIVATE	37
+#define KPF_ARCH		38
+#define KPF_UNCACHED		39
+#define KPF_SOFTDIRTY		40
+#define KPF_ARCH_2		41
+
+
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -33,10 +48,10 @@
 #define PAGEMAP_PFN_NUM_BITS (55)
 #define PAGEMAP_PFN_MASK BIT_MASK_LOWER(PAGEMAP_PFN_NUM_BITS)
 
-#define SWAP_TYPE_NUM_BITS (5)
-#define SWAP_TYPE_MASK BIT_MASK_LOWER(SWAP_TYPE_NUM_BITS)
-#define SWAP_OFFSET_NUM_BITS (50)
-
+#define PAGEMAP_SWAP_TYPE_NUM_BITS (5)
+#define PAGEMAP_SWAP_TYPE_MASK BIT_MASK_LOWER(PAGEMAP_SWAP_TYPE_NUM_BITS)
+#define PAGEMAP_SWAP_OFFSET_NUM_BITS (50)
+#define PAGEMAP_SWAP_OFFSET_MASK BIT_MASK_LOWER(PAGEMAP_SWAP_OFFSET_NUM_BITS)
 
 static uint64_t parse_hex(const char *str)
 {
@@ -280,10 +295,68 @@ static bool get_pagetable_fields(struct memstat *mstat)
 	return true;
 }
 
+// Output all set flags from the specified kpageflags value.
+static void print_kpageflags(uint64_t flags)
+{
+#define CHECK_FLAG(flag)			\
+	if (CHECK_BIT(flags, KPF_##flag))	\
+		printf(STRINGIFY(flag) " ");
+
+	// Alphabetical order.
+	CHECK_FLAG(ACTIVE);
+	CHECK_FLAG(ANON);
+	CHECK_FLAG(BUDDY);
+	CHECK_FLAG(COMPOUND_HEAD);
+	CHECK_FLAG(COMPOUND_TAIL);
+	CHECK_FLAG(DIRTY);
+	CHECK_FLAG(ERROR);
+	CHECK_FLAG(HUGE);
+	CHECK_FLAG(HWPOISON);
+	CHECK_FLAG(IDLE);
+	CHECK_FLAG(KSM);
+	CHECK_FLAG(LOCKED);
+	CHECK_FLAG(LRU);
+	CHECK_FLAG(MMAP);
+	CHECK_FLAG(NOPAGE);
+	CHECK_FLAG(OFFLINE);
+	CHECK_FLAG(PGTABLE);
+	CHECK_FLAG(RECLAIM);
+	CHECK_FLAG(REFERENCED);
+	CHECK_FLAG(SLAB);
+	CHECK_FLAG(SWAPBACKED);
+	CHECK_FLAG(SWAPCACHE);
+	CHECK_FLAG(THP);
+	CHECK_FLAG(UNEVICTABLE);
+	CHECK_FLAG(UPTODATE);
+	CHECK_FLAG(WRITEBACK);
+	CHECK_FLAG(ZERO_PAGE);
+	CHECK_FLAG(RESERVED);
+	CHECK_FLAG(MLOCKED);
+
+	// Handle overloaded flag.
+	if (CHECK_BIT(flags, KPF_MAPPEDTODISK)) {
+		if (CHECK_BIT(flags, KPF_ANON))
+			printf("ANON_EXCLUSIVE ");
+		else
+			printf("MAPPEDTODISK ");
+	}
+
+	CHECK_FLAG(PRIVATE);
+	CHECK_FLAG(PRIVATE_2);
+	CHECK_FLAG(OWNER_PRIVATE);
+	CHECK_FLAG(ARCH);
+	CHECK_FLAG(UNCACHED);
+	CHECK_FLAG(SOFTDIRTY);
+	CHECK_FLAG(ARCH_2);
+#undef CHECK_FLAG
+}
+
 static void print_mapping(struct memstat *mstat, uint64_t index)
 {
 	const uint64_t val = mstat->pagemaps[index];
 	const uint64_t pfn = get_pfn(val);
+	const bool have_pfn = pfn != INVALID_VALUE;
+	const bool swapped = CHECK_BIT(val, PAGEMAP_SWAPPED_BIT);
 
 	printf("%016lx: ", val); // raw
 
@@ -306,36 +379,22 @@ static void print_mapping(struct memstat *mstat, uint64_t index)
 	if (CHECK_BIT(val, PAGEMAP_IS_FILE_BIT))
 		printf("f  ");
 
-	if (CHECK_BIT(val, PAGEMAP_SWAPPED_BIT))
+	if (swapped)
 		printf("Sw ");
 
 	if (CHECK_BIT(val, PAGEMAP_PRESENT_BIT))
 		printf("p  ");
 
-	if (pfn != INVALID_VALUE)
+	if (swapped) {
+		const uint64_t offset = val >> PAGEMAP_SWAP_TYPE_NUM_BITS;
+
+		printf("swap_type=[%lx] ", val & PAGEMAP_SWAP_TYPE_MASK);
+		printf("swap_offset=[%lx] ", offset & PAGEMAP_SWAP_OFFSET_MASK);
+	}  else if (have_pfn) {
 		printf("pfn=[%lx] ", pfn);
-
-/*
-
-
-// Page flags
-#define
-#define  (57)
-#define PAGEMAP_IS_FILE (61)
-// Indicates page swapped out.
-#define PAGEMAP_SWAPPED_BIT (62)
-// Indicates page is present.
-#define PAGEMAP_PRESENT_BIT (63)
-
-// 'Bits 0-54  page frame number (PFN) if present'
-#define PAGEMAP_PFN_NUM_BITS (55)
-#define PAGEMAP_PFN_MASK BIT_MASK_LOWER(PAGEMAP_PFN_NUM_BITS)
-
-#define SWAP_TYPE_NUM_BITS (5)
-#define SWAP_TYPE_MASK BIT_MASK_LOWER(SWAP_TYPE_NUM_BITS)
-#define SWAP_OFFSET_NUM_BITS (50)
-
- */
+		print_kpageflags(mstat->kpageflags[index]);
+		printf("mapcount=[%lu]", mstat->kpagecounts[index]);
+	}
 
 	printf("\n");
 }
