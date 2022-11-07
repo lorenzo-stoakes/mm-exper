@@ -298,6 +298,9 @@ static bool get_pagetable_fields(struct memstat *mstat)
 // Output all set flags from the specified kpageflags value.
 static void print_kpageflags(uint64_t flags)
 {
+	const bool mapped_to_disk = CHECK_BIT(flags, KPF_MAPPEDTODISK);
+	const bool anon = CHECK_BIT(flags, KPF_ANON);
+
 #define CHECK_FLAG(flag)			\
 	if (CHECK_BIT(flags, KPF_##flag))	\
 		printf(STRINGIFY(flag) " ");
@@ -305,6 +308,8 @@ static void print_kpageflags(uint64_t flags)
 	// Alphabetical order.
 	CHECK_FLAG(ACTIVE);
 	CHECK_FLAG(ANON);
+	if (mapped_to_disk && anon) // Handle overloaded flag.
+		printf("ANON_EXCLUSIVE ");
 	CHECK_FLAG(BUDDY);
 	CHECK_FLAG(COMPOUND_HEAD);
 	CHECK_FLAG(COMPOUND_TAIL);
@@ -316,6 +321,8 @@ static void print_kpageflags(uint64_t flags)
 	CHECK_FLAG(KSM);
 	CHECK_FLAG(LOCKED);
 	CHECK_FLAG(LRU);
+	if (mapped_to_disk && !anon)
+		printf("MAPPEDTODISK ");
 	CHECK_FLAG(MMAP);
 	CHECK_FLAG(NOPAGE);
 	CHECK_FLAG(OFFLINE);
@@ -332,15 +339,6 @@ static void print_kpageflags(uint64_t flags)
 	CHECK_FLAG(ZERO_PAGE);
 	CHECK_FLAG(RESERVED);
 	CHECK_FLAG(MLOCKED);
-
-	// Handle overloaded flag.
-	if (CHECK_BIT(flags, KPF_MAPPEDTODISK)) {
-		if (CHECK_BIT(flags, KPF_ANON))
-			printf("ANON_EXCLUSIVE ");
-		else
-			printf("MAPPEDTODISK ");
-	}
-
 	CHECK_FLAG(PRIVATE);
 	CHECK_FLAG(PRIVATE_2);
 	CHECK_FLAG(OWNER_PRIVATE);
