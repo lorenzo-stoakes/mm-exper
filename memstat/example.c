@@ -17,10 +17,14 @@ int main(void)
 
 	mstat_before = memstat_snapshot((uint64_t)ptr);
 
+	printf("=== BEFORE ===\n\n");
+	memstat_print(mstat_before);
+
 	ptr[0] = 'x';
 
 	mstat_after = memstat_snapshot((uint64_t)ptr);
 
+	printf("\n=== AFTER ===\n\n");
 	memstat_print_diff(mstat_before, mstat_after);
 	memstat_free(mstat_before);
 	memstat_free(mstat_after);
