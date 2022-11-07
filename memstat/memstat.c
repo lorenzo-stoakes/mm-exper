@@ -19,13 +19,24 @@
 
 #define CHECK_BIT(_val, _bit) ((_val & BIT_MASK(_bit)) == BIT_MASK(_bit))
 
+// Page flags
+#define PAGEMAP_SOFT_DIRTY_BIT (55)
+#define PAGEMAP_EXCLUSIVE_MAPPED_BIT (56)
+#define PAGEMAP_UFFD_WP_BIT (57)
+#define PAGEMAP_IS_FILE_BIT (61)
 // Indicates page swapped out.
 #define PAGEMAP_SWAPPED_BIT (62)
 // Indicates page is present.
 #define PAGEMAP_PRESENT_BIT (63)
+
 // 'Bits 0-54  page frame number (PFN) if present'
 #define PAGEMAP_PFN_NUM_BITS (55)
 #define PAGEMAP_PFN_MASK BIT_MASK_LOWER(PAGEMAP_PFN_NUM_BITS)
+
+#define SWAP_TYPE_NUM_BITS (5)
+#define SWAP_TYPE_MASK BIT_MASK_LOWER(SWAP_TYPE_NUM_BITS)
+#define SWAP_OFFSET_NUM_BITS (50)
+
 
 static uint64_t parse_hex(const char *str)
 {
@@ -235,9 +246,14 @@ static uint64_t get_pfn(uint64_t val)
 	return val & PAGEMAP_PFN_MASK;
 }
 
+static uint64_t count_virt_pages(const struct memstat *mstat)
+{
+	return mstat->vm_size * 1024 / getpagesize();
+}
+
 static bool get_pagetable_fields(struct memstat *mstat)
 {
-	const uint64_t count = mstat->vm_size * 1024 / getpagesize();
+	const uint64_t count = count_virt_pages(mstat);
 	const uint64_t offset = mstat->vma_start / getpagesize();
 
 	mstat->pagemaps = malloc(count * sizeof(uint64_t));
@@ -264,15 +280,84 @@ static bool get_pagetable_fields(struct memstat *mstat)
 	return true;
 }
 
+static void print_mapping(struct memstat *mstat, uint64_t index)
+{
+	const uint64_t val = mstat->pagemaps[index];
+	const uint64_t pfn = get_pfn(val);
+
+	printf("%016lx: ", val); // raw
+
+	// sD = soft-dirty
+	// xM = exclusive-mapped
+	// uW = uffd-wp write-protected
+	// f  = file
+	// Sw = swapped
+	// p  = present
+
+	if (CHECK_BIT(val, PAGEMAP_SOFT_DIRTY_BIT))
+		printf("sD ");
+
+	if (CHECK_BIT(val, PAGEMAP_EXCLUSIVE_MAPPED_BIT))
+		printf("xM ");
+
+	if (CHECK_BIT(val, PAGEMAP_UFFD_WP_BIT))
+		printf("uW ");
+
+	if (CHECK_BIT(val, PAGEMAP_IS_FILE_BIT))
+		printf("f  ");
+
+	if (CHECK_BIT(val, PAGEMAP_SWAPPED_BIT))
+		printf("Sw ");
+
+	if (CHECK_BIT(val, PAGEMAP_PRESENT_BIT))
+		printf("p  ");
+
+	if (pfn != INVALID_VALUE)
+		printf("pfn=[%lx] ", pfn);
+
+/*
+
+
+// Page flags
+#define
+#define  (57)
+#define PAGEMAP_IS_FILE (61)
+// Indicates page swapped out.
+#define PAGEMAP_SWAPPED_BIT (62)
+// Indicates page is present.
+#define PAGEMAP_PRESENT_BIT (63)
+
+// 'Bits 0-54  page frame number (PFN) if present'
+#define PAGEMAP_PFN_NUM_BITS (55)
+#define PAGEMAP_PFN_MASK BIT_MASK_LOWER(PAGEMAP_PFN_NUM_BITS)
+
+#define SWAP_TYPE_NUM_BITS (5)
+#define SWAP_TYPE_MASK BIT_MASK_LOWER(SWAP_TYPE_NUM_BITS)
+#define SWAP_OFFSET_NUM_BITS (50)
+
+ */
+
+	printf("\n");
+}
+
 void memstat_print(struct memstat *mstat)
 {
+	uint64_t i;
+	uint64_t addr = mstat->vma_start;
+	uint64_t num_pages = count_virt_pages(mstat);
+
 	printf("0x%lx [vma_start]\n", mstat->vma_start);
 	printf("0x%lx [vma_end]\n\n", mstat->vma_end);
 	printf("vm_size=[%lu] rss=[%lu] ref=[%lu] anon=[%lu] anon_huge=[%lu] swap=[%lu] "
-	       "locked=[%lu]\nvm_flags=[%s] perms=[%s] offset=[%lu] name=[%s]\n",
+	       "locked=[%lu]\nvm_flags=[%s] perms=[%s] offset=[%lu] name=[%s]\n\n",
 	       mstat->vm_size, mstat->rss, mstat->referenced, mstat->anon,
 	       mstat->anon_huge, mstat->swap, mstat->locked, mstat->vm_flags, mstat->perms,
 	       mstat->offset, mstat->name);
+
+	for (i = 0; i < num_pages; i++, addr += getpagesize()) {
+		printf("%lx: ", addr);
+		print_mapping(mstat, i);
+	}
 }
 
 struct memstat *memstat_snapshot(uint64_t vaddr)

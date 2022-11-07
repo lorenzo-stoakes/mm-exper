@@ -7,16 +7,18 @@
 int main(void)
 {
         char *ptr = mmap(NULL, 20000, PROT_READ | PROT_WRITE,
-                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
+                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
         if (ptr == MAP_FAILED) {
                 perror("mmap");
                 return EXIT_FAILURE;
         }
 
-	struct memstat *snap = memstat_snapshot((uint64_t)ptr);
-	if (snap != NULL)
-	    memstat_print(snap);
+	ptr[0] = 'x';
+
+	struct memstat *mstat = memstat_snapshot((uint64_t)ptr);
+	if (mstat != NULL)
+	    memstat_print(mstat);
 
 	if (munmap(ptr, 20000) != 0) {
 		perror("munmap");
