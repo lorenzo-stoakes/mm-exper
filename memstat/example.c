@@ -24,7 +24,6 @@ int main(void)
 
 	memstat_print_diff(mstat_before, mstat_after);
 
-
 	if (munmap(ptr, 20000) != 0) {
 		perror("munmap");
 		return EXIT_FAILURE;

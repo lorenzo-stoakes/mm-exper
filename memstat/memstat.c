@@ -451,33 +451,59 @@ void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 	}
 
 	printf("0x%lx [vma_start]\n", mstat_a->vma_start);
-	printf("0x%lx [vma_end]\n\n", mstat_a->vma_end);
+	printf("0x%lx [vma_end]\n", mstat_a->vma_end);
 
 	// We don't need to check vm_size because of above check.
 
-	if (mstat_a->rss != mstat_b->rss)
-		printf("rss=[%lu]->[%lu] ", mstat_a->rss, mstat_b->rss);
-	if (mstat_a->referenced != mstat_b->referenced)
-		printf("ref=[%lu]->[%lu] ", mstat_a->referenced, mstat_b->referenced);
-	if (mstat_a->anon != mstat_b->anon)
-		printf("anon=[%lu]->[%lu] ", mstat_a->anon, mstat_b->anon);
-	if (mstat_a->anon_huge != mstat_b->anon_huge)
-		printf("anon_huge=[%lu]->[%lu] ", mstat_a->anon_huge, mstat_b->anon_huge);
-	if (mstat_a->swap != mstat_b->swap)
-		printf("swap=[%lu]->[%lu] ", mstat_a->swap, mstat_b->swap);
-	if (mstat_a->locked != mstat_b->locked)
-		printf("locked=[%lu]->[%lu] ", mstat_a->locked, mstat_b->locked);
+#define COMPARE(field, fmt, ...)		\
+	if (mstat_a->field != mstat_b->field) {	\
+		seen_first = true;		\
+		printf(fmt, __VA_ARGS__);	\
+	}
 
-	if (strncmp(mstat_a->vm_flags, mstat_b->vm_flags, 255) != 0)
-		printf("vm_flags=[%s]->[%s] ", mstat_a->vm_flags, mstat_b->vm_flags);
-	if (strncmp(mstat_a->perms, mstat_b->perms, 4) != 0)
-		printf("perms=[%s]->[%s] ", mstat_a->perms, mstat_b->perms);
-	if (mstat_a->offset != mstat_b->offset)
-		printf("offset=[%lu]->[%lu] ", mstat_a->offset, mstat_b->offset);
-	if (mstat_a->name != mstat_b->name)
-		printf("name=[%s]->[%s] ", mstat_a->name, mstat_b->name);
+#define COMPARE_STR(field, fmt, ...)				\
+	{							\
+		const char *from = mstat_a->field == NULL	\
+			? "" : mstat_a->field;			\
+		const char *to = mstat_b->field == NULL		\
+			? "" : mstat_b->field;			\
+		if (strncmp(from, to, 255) != 0) {		\
+			seen_first = true;			\
+			printf(fmt, __VA_ARGS__);		\
+		}						\
+	}
 
-	printf("\n");
+#define COMPARE_STR_UNSAFE(field, fmt, ...)			\
+	if (strcmp(mstat_a->field, mstat_b->field) != 0) {	\
+		seen_first = true;				\
+		printf(fmt, __VA_ARGS__);			\
+	}
+
+	COMPARE(rss, "rss=[%lu]->[%lu] ", mstat_a->rss, mstat_b->rss);
+	COMPARE(referenced, "ref=[%lu]->[%lu] ", mstat_a->referenced, mstat_b->referenced);
+	COMPARE(anon, "anon=[%lu]->[%lu] ", mstat_a->anon, mstat_b->anon);
+	COMPARE(anon_huge, "anon_huge=[%lu]->[%lu] ", mstat_a->anon_huge, mstat_b->anon_huge);
+	COMPARE(swap, "swap=[%lu]->[%lu] ", mstat_a->swap, mstat_b->swap);
+	COMPARE(locked, "locked=[%lu]->[%lu] ", mstat_a->locked, mstat_b->locked);
+
+	if (seen_first) {
+		printf("\n");
+		seen_first = false;
+	}
+
+	COMPARE_STR(vm_flags, "vm_flags=[%s]->[%s] ", mstat_a->vm_flags, mstat_b->vm_flags);
+	COMPARE_STR_UNSAFE(perms, "perms=[%s]->[%s] ", mstat_a->perms, mstat_b->perms);
+	COMPARE(offset, "offset=[%lu]->[%lu] ", mstat_a->offset, mstat_b->offset);
+	COMPARE_STR(name, "name=[%s]->[%s] ", mstat_a->name, mstat_b->name);
+
+#undef COMPARE
+#undef COMPARE_STR
+#undef COMPARE_STR_UNSAFE
+
+	if (seen_first) {
+		printf("\n");
+		seen_first = false;
+	}
 
 	for (i = 0; i < num_pages; i++, addr += getpagesize()) {
 		if (mstat_a->pagemaps[i] == mstat_b->pagemaps[i] &&
@@ -492,7 +518,7 @@ void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 
 		printf("%016lx: ", addr);
 		print_mapping(mstat_a, i);
-		printf("                : ");
+		printf("               -> ");
 		print_mapping(mstat_b, i);
 	}
 }
