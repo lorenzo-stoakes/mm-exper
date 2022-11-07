@@ -7,7 +7,6 @@
 int main(void)
 {
 	struct memstat *mstat_before, *mstat_after;
-
         char *ptr = mmap(NULL, 20000, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 

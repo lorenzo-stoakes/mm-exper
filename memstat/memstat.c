@@ -16,7 +16,6 @@
 
 
 #include <errno.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -252,10 +251,15 @@ static uint64_t read_u64(const char *path, uint64_t offset, bool report_errors)
 	return ret;
 }
 
+static bool has_pfn(uint64_t val)
+{
+	return !CHECK_BIT(val, PAGEMAP_SWAPPED_BIT) &&
+		CHECK_BIT(val, PAGEMAP_PRESENT_BIT);
+}
+
 static uint64_t get_pfn(uint64_t val)
 {
-	if (CHECK_BIT(val, PAGEMAP_SWAPPED_BIT) ||
-	    !CHECK_BIT(val, PAGEMAP_PRESENT_BIT))
+	if (!has_pfn(val))
 		return INVALID_VALUE;
 
 	return val & PAGEMAP_PFN_MASK;
@@ -266,8 +270,34 @@ static uint64_t count_virt_pages(const struct memstat *mstat)
 	return mstat->vm_size * 1024 / getpagesize();
 }
 
+// Stats aren't always updated quickly so also do our own counting.
+static void tweak_counts(struct memstat *mstat, uint64_t count)
+{
+	uint64_t i;
+	uint64_t rss_kib;
+	uint64_t pagecount = 0;
+
+	// For now we just tweak RSS.
+
+	for (i = 0; i < count; i++) {
+		const uint64_t entry = mstat->pagemaps[i];
+
+		if (has_pfn(entry))
+			pagecount++;
+	}
+
+	rss_kib = pagecount * getpagesize() / 1024;
+
+	if (mstat->rss == rss_kib)
+		return;
+
+	mstat->rss = rss_kib;
+	mstat->rss_counted = true;
+}
+
 static bool get_pagetable_fields(struct memstat *mstat)
 {
+	uint64_t i;
 	const uint64_t count = count_virt_pages(mstat);
 	const uint64_t offset = mstat->vma_start / getpagesize();
 
@@ -281,7 +311,7 @@ static bool get_pagetable_fields(struct memstat *mstat)
 		return false; // We will free pagemaps elsewhere.
 
 	// Get page flags and counts if they exist.
-	for (uint64_t i = 0; i < count; i++) {
+	for (i = 0; i < count; i++) {
 		const uint64_t entry = mstat->pagemaps[i];
 		const uint64_t pfn = get_pfn(entry);
 
@@ -292,6 +322,8 @@ static bool get_pagetable_fields(struct memstat *mstat)
 		mstat->kpagecounts[i] = read_u64("/proc/kpagecount", pfn, false);
 		mstat->kpageflags[i] = read_u64("/proc/kpageflags", pfn, false);
 	}
+
+	tweak_counts(mstat, count);
 
 	return true;
 }
@@ -413,9 +445,9 @@ void memstat_print(struct memstat *mstat)
 
 	printf("0x%lx [vma_start]\n", mstat->vma_start);
 	printf("0x%lx [vma_end]\n\n", mstat->vma_end);
-	printf("vm_size=[%lu] rss=[%lu] ref=[%lu] anon=[%lu] anon_huge=[%lu] swap=[%lu] "
+	printf("vm_size=[%lu] rss=[%lu%s] ref=[%lu] anon=[%lu] anon_huge=[%lu] swap=[%lu] "
 	       "locked=[%lu]\nvm_flags=[%s] perms=[%s] offset=[%lu] name=[%s]\n\n",
-	       mstat->vm_size, mstat->rss, mstat->referenced, mstat->anon,
+	       mstat->vm_size, mstat->rss, mstat->rss_counted ? "*" : "", mstat->referenced, mstat->anon,
 	       mstat->anon_huge, mstat->swap, mstat->locked, mstat->vm_flags, mstat->perms,
 	       mstat->offset, mstat->name);
 
@@ -479,7 +511,9 @@ void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 		printf(fmt, __VA_ARGS__);			\
 	}
 
-	COMPARE(rss, "rss=[%lu]->[%lu] ", mstat_a->rss, mstat_b->rss);
+	COMPARE(rss, "rss=[%lu%s]->[%lu%s] ", mstat_a->rss,
+		mstat_a->rss_counted ? "*" : "",
+		mstat_b->rss, mstat_b->rss_counted ? "*" : "");
 	COMPARE(referenced, "ref=[%lu]->[%lu] ", mstat_a->referenced, mstat_b->referenced);
 	COMPARE(anon, "anon=[%lu]->[%lu] ", mstat_a->anon, mstat_b->anon);
 	COMPARE(anon_huge, "anon_huge=[%lu]->[%lu] ", mstat_a->anon_huge, mstat_b->anon_huge);

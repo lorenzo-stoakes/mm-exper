@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 // VMA and underlying page statistics taken from:-
@@ -16,6 +17,7 @@ struct memstat {
 	// Subset of smaps information.
 	uint64_t vm_size;
 	uint64_t rss;
+	bool rss_counted; // Did we manually count entries? (VM stats being slow)
 	uint64_t referenced;
 	uint64_t anon;
 	uint64_t anon_huge;
