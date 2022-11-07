@@ -385,6 +385,5 @@ int main(void)
 	wait(NULL);
 	print_kpageflags_virt(ptr6, "mmap anon, shared, post fork done");
 
-
 	return EXIT_SUCCESS;
 }
