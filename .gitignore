@@ -1,3 +1,5 @@
 section-pointers
 test-musl-malloc
 read-pageflags
+memstat/example-mstat
+*.o
