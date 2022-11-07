@@ -425,6 +425,78 @@ void memstat_print(struct memstat *mstat)
 	}
 }
 
+void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
+{
+	uint64_t i;
+	uint64_t addr;
+	uint64_t num_pages;
+	bool seen_first = false;
+
+	if (mstat_a == NULL || mstat_b == NULL) {
+		fprintf(stderr, "NULL input?");
+		return;
+	}
+
+	addr = mstat_a->vma_start;
+	num_pages = count_virt_pages(mstat_a);
+
+	// This will be too fiddly to deal with manually so just output both.
+	if (mstat_a->vma_start != mstat_b->vma_start ||
+	    mstat_a->vma_end != mstat_b->vma_end) {
+		printf("VMA RANGE CHANGE. Outputting both for manual diff:-\\");
+		memstat_print(mstat_a);
+		printf("========\n");
+		memstat_print(mstat_b);
+		return;
+	}
+
+	printf("0x%lx [vma_start]\n", mstat_a->vma_start);
+	printf("0x%lx [vma_end]\n\n", mstat_a->vma_end);
+
+	// We don't need to check vm_size because of above check.
+
+	if (mstat_a->rss != mstat_b->rss)
+		printf("rss=[%lu]->[%lu] ", mstat_a->rss, mstat_b->rss);
+	if (mstat_a->referenced != mstat_b->referenced)
+		printf("ref=[%lu]->[%lu] ", mstat_a->referenced, mstat_b->referenced);
+	if (mstat_a->anon != mstat_b->anon)
+		printf("anon=[%lu]->[%lu] ", mstat_a->anon, mstat_b->anon);
+	if (mstat_a->anon_huge != mstat_b->anon_huge)
+		printf("anon_huge=[%lu]->[%lu] ", mstat_a->anon_huge, mstat_b->anon_huge);
+	if (mstat_a->swap != mstat_b->swap)
+		printf("swap=[%lu]->[%lu] ", mstat_a->swap, mstat_b->swap);
+	if (mstat_a->locked != mstat_b->locked)
+		printf("locked=[%lu]->[%lu] ", mstat_a->locked, mstat_b->locked);
+
+	if (strncmp(mstat_a->vm_flags, mstat_b->vm_flags, 255) != 0)
+		printf("vm_flags=[%s]->[%s] ", mstat_a->vm_flags, mstat_b->vm_flags);
+	if (strncmp(mstat_a->perms, mstat_b->perms, 4) != 0)
+		printf("perms=[%s]->[%s] ", mstat_a->perms, mstat_b->perms);
+	if (mstat_a->offset != mstat_b->offset)
+		printf("offset=[%lu]->[%lu] ", mstat_a->offset, mstat_b->offset);
+	if (mstat_a->name != mstat_b->name)
+		printf("name=[%s]->[%s] ", mstat_a->name, mstat_b->name);
+
+	printf("\n");
+
+	for (i = 0; i < num_pages; i++, addr += getpagesize()) {
+		if (mstat_a->pagemaps[i] == mstat_b->pagemaps[i] &&
+		    mstat_a->kpagecounts[i] == mstat_b->kpagecounts[i] &&
+		    mstat_a->kpageflags[i] == mstat_b->kpageflags[i])
+			continue;
+
+		if (!seen_first) {
+			printf("\n");
+			seen_first = true;
+		}
+
+		printf("%016lx: ", addr);
+		print_mapping(mstat_a, i);
+		printf("                : ");
+		print_mapping(mstat_b, i);
+	}
+}
+
 struct memstat *memstat_snapshot(uint64_t vaddr)
 {
 	uint64_t from, to;
