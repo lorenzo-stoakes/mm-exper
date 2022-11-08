@@ -483,7 +483,7 @@ void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 	}
 
 	printf("0x%lx [vma_start]\n", mstat_a->vma_start);
-	printf("0x%lx [vma_end]\n", mstat_a->vma_end);
+	printf("0x%lx [vma_end]\n\n", mstat_a->vma_end);
 
 	// We don't need to check vm_size because of above check.
 
