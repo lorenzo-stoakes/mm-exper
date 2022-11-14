@@ -10,18 +10,10 @@ static void usage(const char *bin)
 	fprintf(stderr, "usage: %s [pid to trace] <-s>\n", bin);
 }
 
-static void print_separator(void)
-{
-	for (int i = 0; i < 80; i++)
-		printf("=");
-	printf("\n");
-}
-
 int main(int argc, char **argv)
 {
 	const char *pid;
 	struct memstat **mstats;
-	int i;
 	bool silent = false;
 
 	if (argc < 2) {
@@ -45,18 +37,8 @@ int main(int argc, char **argv)
 	if (mstats == NULL)
 		return EXIT_FAILURE;
 
-	for (i = 0; i < MAX_MAPS; i++) {
-		struct memstat *mstat = mstats[i];
-		if (mstat == NULL)
-			break;
-
-		if (!silent) {
-			printf("\n");
-			print_separator();
-			printf("\n");
-			memstat_print(mstat);
-		}
-	}
+	if (!silent)
+		memstat_print_all(mstats);
 
 	memstat_free_all(mstats);
 

@@ -46,6 +46,9 @@ struct memstat **memstat_snapshot_all(const char *pid);
 // Detailed information to stdout.
 void memstat_print(struct memstat *mstat);
 
+// Print all memstat entries.
+void memstat_print_all(struct memstat **mstats);
+
 // Diff between two mstats to stdout.
 void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b);
 

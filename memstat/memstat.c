@@ -460,6 +460,29 @@ void memstat_print(struct memstat *mstat)
 	}
 }
 
+static void print_separator(void)
+{
+	for (int i = 0; i < 80; i++)
+		printf("=");
+	printf("\n");
+}
+
+void memstat_print_all(struct memstat **mstats)
+{
+	int i;
+
+	for (i = 0; i < MAX_MAPS; i++) {
+		struct memstat *mstat = mstats[i];
+		if (mstat == NULL)
+			break;
+
+		printf("\n");
+		print_separator();
+		printf("\n");
+		memstat_print(mstat);
+	}
+}
+
 void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 {
 	uint64_t i;
