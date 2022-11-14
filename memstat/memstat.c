@@ -295,11 +295,16 @@ static void tweak_counts(struct memstat *mstat, uint64_t count)
 	mstat->rss_counted = true;
 }
 
-static bool get_pagetable_fields(struct memstat *mstat)
+static bool get_pagetable_fields(const char *pid, struct memstat *mstat)
 {
 	uint64_t i;
 	const uint64_t count = count_virt_pages(mstat);
 	const uint64_t offset = mstat->vma_start / getpagesize();
+
+	char path[512] = "/proc/";
+
+	strncat(path, pid, sizeof(path) - 1);
+	strncat(path, "/pagemap", sizeof(path) - 1);
 
 	mstat->pagemaps = malloc(count * sizeof(uint64_t));
 	// These may not be populated depending on whether physical pages are mapped/
@@ -307,7 +312,7 @@ static bool get_pagetable_fields(struct memstat *mstat)
 	mstat->kpagecounts = calloc(count, sizeof(uint64_t));
 	mstat->kpageflags = calloc(count, sizeof(uint64_t));
 
-	if (!read_u64s(mstat->pagemaps, "/proc/self/pagemap", offset, count, true))
+	if (!read_u64s(mstat->pagemaps, path, offset, count, true))
 		return false; // We will free pagemaps elsewhere.
 
 	// Get page flags and counts if they exist.
@@ -619,7 +624,7 @@ static struct memstat *get_memstat_snapshot(const char *pid, uint64_t vaddr)
 	}
 
 	// Finally, get page table fields.
-	if (!get_pagetable_fields(ret)) {
+	if (!get_pagetable_fields(pid, ret)) {
 		memstat_free(ret);
 		ret = NULL;
 		goto out;
@@ -636,6 +641,11 @@ out:
 struct memstat *memstat_snapshot(uint64_t vaddr)
 {
 	return get_memstat_snapshot("self", vaddr);
+}
+
+struct memstat *memstat_snapshot_remote(const char *pid, uint64_t vaddr)
+{
+	return get_memstat_snapshot(pid, vaddr);
 }
 
 void memstat_free(struct memstat* mstat)

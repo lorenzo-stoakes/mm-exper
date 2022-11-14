@@ -35,6 +35,9 @@ struct memstat {
 // VMA cannot be found.
 struct memstat *memstat_snapshot(uint64_t vaddr);
 
+// Same as memstat_snapshot() only can specify remote PID.
+struct memstat *memstat_snapshot_remote(const char *pid, uint64_t vaddr);
+
 // Detailed information to stdout.
 void memstat_print(struct memstat *mstat);
 
