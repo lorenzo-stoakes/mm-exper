@@ -562,6 +562,24 @@ void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 	}
 }
 
+static FILE *open_smaps(const char *pid)
+{
+	FILE *fp;
+	char path[512] = "/proc/";
+
+	strncat(path, pid, sizeof(path) - 1);
+	strncat(path, "/smaps", sizeof(path) - 1);
+
+	fp = fopen(path, "r");
+
+	if (fp == NULL) {
+		fprintf(stderr, "ERROR: Can't open %s\n", path);
+		return NULL;
+	}
+
+	return fp;
+}
+
 static struct memstat *get_memstat_snapshot(const char *pid, uint64_t vaddr)
 {
 	uint64_t from, to;
@@ -570,17 +588,10 @@ static struct memstat *get_memstat_snapshot(const char *pid, uint64_t vaddr)
 	char *line = NULL;
 	size_t len = 0;
 
-	char path[512] = "/proc/";
+	FILE *fp = open_smaps(pid);
 
-	strncat(path, pid, sizeof(path) - 1);
-	strncat(path, "/smaps", sizeof(path) - 1);
-
-	FILE *fp = fopen(path, "r");
-
-	if (fp == NULL) {
-		fprintf(stderr, "ERROR: Can't open %s\n", path);
+	if (fp == NULL)
 		return NULL;
-	}
 
 	// Find the start of the smap block.
 	while (getline(&line, &len, fp) >= 0) {
