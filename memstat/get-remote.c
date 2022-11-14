@@ -10,6 +10,13 @@ static void usage(const char *bin)
 	fprintf(stderr, "usage: %s [pid to trace] <-s>\n", bin);
 }
 
+static void print_separator(void)
+{
+	for (int i = 0; i < 80; i++)
+		printf("=");
+	printf("\n");
+}
+
 int main(int argc, char **argv)
 {
 	const char *pid;
@@ -44,6 +51,8 @@ int main(int argc, char **argv)
 			break;
 
 		if (!silent) {
+			printf("\n");
+			print_separator();
 			printf("\n");
 			memstat_print(mstat);
 		}
