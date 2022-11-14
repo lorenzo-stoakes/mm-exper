@@ -126,12 +126,14 @@ static bool get_smap_header_fields(struct memstat *ms, char *line)
 	ms->offset = offset;
 	strncpy((char *)ms->perms, perms, sizeof(perms));
 
+
+	if (res <= 5)
+		return true;
+
 	// If it has a name, assign it.
-	if (res > 5) {
-		size_t len = strnlen(name, sizeof(name));
-		ms->name = malloc(len);
-		strncpy((char *)ms->name, name, len);
-	}
+	size_t len = strnlen(name, sizeof(name));
+	ms->name = malloc(len + 1);
+	strncpy((char *)ms->name, name, len);
 
 	return true;
 }
@@ -451,7 +453,7 @@ void memstat_print(struct memstat *mstat)
 	       "locked=[%lu]\nvm_flags=[%s] perms=[%s] offset=[%lu] name=[%s]\n\n",
 	       mstat->vm_size, mstat->rss, mstat->rss_counted ? "*" : "", mstat->referenced, mstat->anon,
 	       mstat->anon_huge, mstat->swap, mstat->locked, mstat->vm_flags, mstat->perms,
-	       mstat->offset, mstat->name);
+	       mstat->offset, mstat->name == NULL ? "" : mstat->name);
 
 	for (i = 0; i < num_pages; i++, addr += getpagesize()) {
 		printf("%lx: ", addr);
