@@ -193,11 +193,11 @@ static bool get_smap_other_fields(struct memstat *ms, char *line, FILE *smaps_fp
 	return true;
 }
 
-// Read a single uint64 from the specified path at the specified offset (both
-// count and offset expressed in uint64_t's)
+// Read count uint64s from the specified path at the specified offset.
 static bool read_u64s(uint64_t *ptr, const char *path, uint64_t offset, uint64_t count,
 		      bool report_errors)
 {
+	uint64_t read;
 	FILE *fp = fopen(path, "r");
 	bool ret = true;
 
@@ -217,13 +217,11 @@ static bool read_u64s(uint64_t *ptr, const char *path, uint64_t offset, uint64_t
 		goto error_close;
 	}
 
-	if (fread(ptr, sizeof(uint64_t), count, fp) != count) {
-		if (!report_errors)
+	if ((read = fread(ptr, sizeof(uint64_t), count, fp)) != count) {
+		if (feof(fp) || !report_errors)
 			goto error_close;
 
-		if (feof(fp))
-			fprintf(stderr, "ERROR: EOF in %s?\n", path);
-		else if (ferror(fp))
+		if (ferror(fp))
 			fprintf(stderr, "ERROR: Unable to read %s\n", path);
 		else
 			fprintf(stderr, "ERROR: Unknown error on %s read\n", path);
