@@ -53,7 +53,7 @@ void memstat_print_all(struct memstat **mstats);
 bool memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b);
 
 // Print all memstat diffs. Return indicates if diff detected.
-void memstat_print_diff_all(struct memstat **mstats_a, struct memstat **mstats_b);
+bool memstat_print_diff_all(struct memstat **mstats_a, struct memstat **mstats_b);
 
 // Free previously allocated mstat object.
 void memstat_free(struct memstat *mstat);

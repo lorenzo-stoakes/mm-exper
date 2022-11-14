@@ -440,12 +440,8 @@ static void print_mapping(struct memstat *mstat, uint64_t index)
 	printf("\n");
 }
 
-void memstat_print(struct memstat *mstat)
+static void print_header(struct memstat *mstat)
 {
-	uint64_t i;
-	uint64_t addr = mstat->vma_start;
-	uint64_t num_pages = count_virt_pages(mstat);
-
 	printf("0x%lx [vma_start]\n", mstat->vma_start);
 	printf("0x%lx [vma_end]\n\n", mstat->vma_end);
 	printf("vm_size=[%lu] rss=[%lu%s] ref=[%lu] anon=[%lu] anon_huge=[%lu] swap=[%lu] "
@@ -453,6 +449,21 @@ void memstat_print(struct memstat *mstat)
 	       mstat->vm_size, mstat->rss, mstat->rss_counted ? "*" : "", mstat->referenced, mstat->anon,
 	       mstat->anon_huge, mstat->swap, mstat->locked, mstat->vm_flags, mstat->perms,
 	       mstat->offset, mstat->name == NULL ? "" : mstat->name);
+}
+
+void memstat_print(struct memstat *mstat)
+{
+	uint64_t i;
+	uint64_t addr;
+	uint64_t num_pages;
+
+	if (mstat == NULL)
+		return;
+
+	print_header(mstat);
+
+	addr = mstat->vma_start;
+	num_pages = count_virt_pages(mstat);
 
 	for (i = 0; i < num_pages; i++, addr += getpagesize()) {
 		printf("%lx: ", addr);
@@ -583,15 +594,15 @@ bool memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 		return false;
 
 	printf("\n");
-	printf("0x%lx [vma_start]\n", mstat_a->vma_start);
-	printf("0x%lx [vma_end]\n\n", mstat_a->vma_end);
+	print_header(mstat_a);
 
 	return true;
 }
 
-void memstat_print_diff_all(struct memstat **mstats_a, struct memstat **mstats_b)
+bool memstat_print_diff_all(struct memstat **mstats_a, struct memstat **mstats_b)
 {
 	int i;
+	bool seen = false;
 
 	for (i = 0; i < MAX_MAPS; i++) {
 		bool updated;
@@ -605,10 +616,14 @@ void memstat_print_diff_all(struct memstat **mstats_a, struct memstat **mstats_b
 		if (!updated)
 			continue;
 
+		seen = true;
+
 		printf("\n");
 		print_separator();
 		printf("\n");
 	}
+
+	return seen;
 }
 
 static FILE *open_smaps(const char *pid)
