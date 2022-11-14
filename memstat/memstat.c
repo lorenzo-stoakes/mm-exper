@@ -113,19 +113,18 @@ static bool is_smap_header_field(const char *line, size_t len)
 
 static bool get_smap_header_fields(struct memstat *ms, char *line)
 {
-	char range[255], perms[5], dev_num[64], name[255];
-	uint64_t offset, inode;
+	char range[255], perms[5], dev_num[64], offset[64], name[255];
+	uint64_t inode;
 	int res;
 
-	res = sscanf(line, "%s %s %lu %s %lu %s", range, perms, &offset, dev_num, &inode, name);
+	res = sscanf(line, "%s %s %s %s %lu %s", range, perms, offset, dev_num, &inode, name);
 	if (res < 5) {
 		fprintf(stderr, "ERROR: Can't parse smap header line [%s]", line);
 		return false;
 	}
 
-	ms->offset = offset;
+	ms->offset = parse_hex(offset);
 	strncpy((char *)ms->perms, perms, sizeof(perms));
-
 
 	if (res <= 5)
 		return true;
@@ -133,7 +132,7 @@ static bool get_smap_header_fields(struct memstat *ms, char *line)
 	// If it has a name, assign it.
 	size_t len = strnlen(name, sizeof(name));
 	ms->name = malloc(len + 1);
-	strncpy((char *)ms->name, name, len);
+	strncpy((char *)ms->name, name, len + 1);
 
 	return true;
 }
