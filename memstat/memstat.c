@@ -483,7 +483,7 @@ void memstat_print_all(struct memstat **mstats)
 	}
 }
 
-void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
+bool memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 {
 	uint64_t i;
 	uint64_t addr;
@@ -492,7 +492,7 @@ void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 
 	if (mstat_a == NULL || mstat_b == NULL) {
 		fprintf(stderr, "NULL input?");
-		return;
+		return false;
 	}
 
 	addr = mstat_a->vma_start;
@@ -505,7 +505,7 @@ void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 		memstat_print(mstat_a);
 		printf("========\n");
 		memstat_print(mstat_b);
-		return;
+		return true;
 	}
 
 	// We don't need to check vm_size because of above check.
@@ -580,12 +580,13 @@ void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 	}
 
 	if (!seen_first)
-		return;
+		return false;
 
 	printf("\n");
 	printf("0x%lx [vma_start]\n", mstat_a->vma_start);
 	printf("0x%lx [vma_end]\n\n", mstat_a->vma_end);
-}
+
+	return true;
 }
 
 static FILE *open_smaps(const char *pid)
