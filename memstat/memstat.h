@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define MAX_MAPS 8192
+
 // VMA and underlying page statistics taken from:-
 //   * /proc/$$/smaps
 //   * /proc/$$/pagemap
@@ -38,6 +40,9 @@ struct memstat *memstat_snapshot(uint64_t vaddr);
 // Same as memstat_snapshot() only can specify remote PID.
 struct memstat *memstat_snapshot_remote(const char *pid, uint64_t vaddr);
 
+// Grab snapshot of all memory mappings.
+struct memstat **memstat_snapshot_all(const char *pid);
+
 // Detailed information to stdout.
 void memstat_print(struct memstat *mstat);
 
@@ -46,3 +51,6 @@ void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b);
 
 // Free previously allocated mstat object.
 void memstat_free(struct memstat *mstat);
+
+// Free bulk-allocated mstat objects.
+void memstat_free_all(struct memstat **mstats);

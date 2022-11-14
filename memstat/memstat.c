@@ -14,7 +14,6 @@
 #define KPF_SOFTDIRTY		40
 #define KPF_ARCH_2		41
 
-
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -667,6 +666,25 @@ struct memstat *memstat_snapshot_remote(const char *pid, uint64_t vaddr)
 	return ret;
 }
 
+struct memstat **memstat_snapshot_all(const char *pid)
+{
+	int i;
+	FILE *fp = open_smaps(pid);
+	struct memstat **ret = calloc(MAX_MAPS, sizeof(struct memstat*));
+
+	for (i = 0; i < MAX_MAPS; i++) {
+		// Get next snapshot.
+		ret[i] = get_memstat_snapshot(fp, pid, INVALID_VALUE);
+		if (ret[i] == NULL)
+			return ret;
+	}
+
+	fprintf(stderr, "ERROR: More than %d maps!", MAX_MAPS);
+	memstat_free_all(ret);
+
+	return NULL;
+}
+
 void memstat_free(struct memstat* mstat)
 {
 	if (mstat == NULL)
@@ -688,4 +706,15 @@ void memstat_free(struct memstat* mstat)
 		free(mstat->kpageflags);
 
 	free(mstat);
+}
+
+void memstat_free_all(struct memstat **mstats)
+{
+	for (int i = 0; i < MAX_MAPS; i++) {
+		struct memstat *mstat = mstats[i];
+		if (mstat == NULL)
+			return;
+
+		memstat_free(mstat);
+	}
 }
