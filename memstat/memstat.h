@@ -49,7 +49,7 @@ void memstat_print(struct memstat *mstat);
 // Print all memstat entries.
 void memstat_print_all(struct memstat **mstats);
 
-// Diff between two mstats to stdout.
+// Print diff between two mstats to stdout.
 void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b);
 
 // Free previously allocated mstat object.

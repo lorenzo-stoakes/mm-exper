@@ -508,9 +508,6 @@ void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 		return;
 	}
 
-	printf("0x%lx [vma_start]\n", mstat_a->vma_start);
-	printf("0x%lx [vma_end]\n\n", mstat_a->vma_end);
-
 	// We don't need to check vm_size because of above check.
 
 #define COMPARE(field, fmt, ...)		\
@@ -581,6 +578,14 @@ void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 		printf("               -> ");
 		print_mapping(mstat_b, i);
 	}
+
+	if (!seen_first)
+		return;
+
+	printf("\n");
+	printf("0x%lx [vma_start]\n", mstat_a->vma_start);
+	printf("0x%lx [vma_end]\n\n", mstat_a->vma_end);
+}
 }
 
 static FILE *open_smaps(const char *pid)
