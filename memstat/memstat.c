@@ -557,14 +557,19 @@ void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 	}
 }
 
-struct memstat *memstat_snapshot(uint64_t vaddr)
+static struct memstat *get_memstat_snapshot(const char *pid, uint64_t vaddr)
 {
 	uint64_t from, to;
 	struct memstat *ret = NULL;
 	bool found = false;
 	char *line = NULL;
 	size_t len = 0;
-	const char *path = "/proc/self/smaps";
+
+	char path[512] = "/proc/";
+
+	strncat(path, pid, sizeof(path) - 1);
+	strncat(path, "/smaps", sizeof(path) - 1);
+
 	FILE *fp = fopen(path, "r");
 
 	if (fp == NULL) {
@@ -626,6 +631,11 @@ out:
 		free(line);
 
 	return ret;
+}
+
+struct memstat *memstat_snapshot(uint64_t vaddr)
+{
+	return get_memstat_snapshot("self", vaddr);
 }
 
 void memstat_free(struct memstat* mstat)

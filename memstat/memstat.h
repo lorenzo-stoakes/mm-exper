@@ -31,12 +31,12 @@ struct memstat {
 	uint64_t *kpageflags;
 };
 
-// Detailed information to stdout.
-void memstat_print(struct memstat *mstat);
-
 // Grab snapshot for VMA containing specified virtual address. Returns NULL if
 // VMA cannot be found.
 struct memstat *memstat_snapshot(uint64_t vaddr);
+
+// Detailed information to stdout.
+void memstat_print(struct memstat *mstat);
 
 // Diff between two mstats to stdout.
 void memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b);
