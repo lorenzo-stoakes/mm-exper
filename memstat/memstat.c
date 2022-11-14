@@ -589,6 +589,28 @@ bool memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 	return true;
 }
 
+void memstat_print_diff_all(struct memstat **mstats_a, struct memstat **mstats_b)
+{
+	int i;
+
+	for (i = 0; i < MAX_MAPS; i++) {
+		bool updated;
+		struct memstat *mstat_a = mstats_a[i];
+		struct memstat *mstat_b = mstats_b[i];
+
+		if (mstat_a == NULL || mstat_b == NULL)
+			break;
+
+		updated = memstat_print_diff(mstat_a, mstat_b);
+		if (!updated)
+			continue;
+
+		printf("\n");
+		print_separator();
+		printf("\n");
+	}
+}
+
 static FILE *open_smaps(const char *pid)
 {
 	FILE *fp;
