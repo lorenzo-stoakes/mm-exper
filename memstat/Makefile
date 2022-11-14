@@ -1,14 +1,14 @@
-all: example-mstat get-remote
+all: example-mstat memstat
 
 SHARED_OPTIONS=-g -Wall -Werror --std=gnu99 -I. -O2
 
 example-mstat: memstat.h memstat.c example.c
 	gcc $(SHARED_OPTIONS) memstat.c example.c -o example-mstat
 
-get-remote: memstat.h memstat.c get-remote.c
-	gcc $(SHARED_OPTIONS) memstat.c get-remote.c -o get-remote
+memstat: memstat.h memstat.c memstat-cmd.c
+	gcc $(SHARED_OPTIONS) memstat.c memstat-cmd.c -o memstat
 
 clean:
-	rm example-mstat get-remote
+	rm example-mstat memstat
 
 .PHONY: all clean

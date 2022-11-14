@@ -2,5 +2,5 @@ section-pointers
 test-musl-malloc
 read-pageflags
 memstat/example-mstat
-memstat/get-remote
+memstat/memstat
 *.o
