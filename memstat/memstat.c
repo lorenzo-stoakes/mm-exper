@@ -580,15 +580,13 @@ static FILE *open_smaps(const char *pid)
 	return fp;
 }
 
-static struct memstat *get_memstat_snapshot(const char *pid, uint64_t vaddr)
+static struct memstat *get_memstat_snapshot(FILE *fp, const char *pid, uint64_t vaddr)
 {
 	uint64_t from, to;
 	struct memstat *ret = NULL;
 	bool found = false;
 	char *line = NULL;
 	size_t len = 0;
-
-	FILE *fp = open_smaps(pid);
 
 	if (fp == NULL)
 		return NULL;
@@ -606,7 +604,8 @@ static struct memstat *get_memstat_snapshot(const char *pid, uint64_t vaddr)
 		if (!extract_address_range(buf, &from, &to))
 			goto out;
 
-		if (vaddr >= from && vaddr < to) {
+		// INVALID_VALUE implies get first.
+		if (vaddr == INVALID_VALUE || (vaddr >= from && vaddr < to)) {
 			found = true;
 			break;
 		}
@@ -642,7 +641,6 @@ static struct memstat *get_memstat_snapshot(const char *pid, uint64_t vaddr)
 	}
 
 out:
-	fclose(fp);
 	if (line != NULL)
 		free(line);
 
@@ -651,12 +649,22 @@ out:
 
 struct memstat *memstat_snapshot(uint64_t vaddr)
 {
-	return get_memstat_snapshot("self", vaddr);
+	FILE *fp = open_smaps("self");
+	struct memstat *ret = get_memstat_snapshot(fp, "self", vaddr);
+
+	fclose(fp);
+
+	return ret;
 }
 
 struct memstat *memstat_snapshot_remote(const char *pid, uint64_t vaddr)
 {
-	return get_memstat_snapshot(pid, vaddr);
+	FILE *fp = open_smaps(pid);
+	struct memstat *ret = get_memstat_snapshot(fp, pid, vaddr);
+
+	fclose(fp);
+
+	return ret;
 }
 
 void memstat_free(struct memstat* mstat)
