@@ -385,12 +385,33 @@ static void print_kpageflags(uint64_t flags)
 #undef CHECK_FLAG
 }
 
-static void print_mapping(uint64_t addr, struct memstat *mstat, uint64_t index)
+static uint64_t last_seen_map = INVALID_VALUE;
+static uint64_t last_seen_addr;
+static uint64_t seen_map_count;
+
+static void print_mapping(uint64_t addr, struct memstat *mstat, uint64_t index,
+			  bool abbrev)
 {
 	const uint64_t val = mstat->pagemaps[index];
 	const uint64_t pfn = get_pfn(val);
 	const bool have_pfn = pfn != INVALID_VALUE;
 	const bool swapped = CHECK_BIT(val, PAGEMAP_SWAPPED_BIT);
+	const bool new_val = val != last_seen_map;
+
+	if (abbrev && new_val) {
+		if(seen_map_count > 1) {
+			printf("...\n");
+			printf("%016lx\n", last_seen_addr);
+		}
+
+		seen_map_count = 0;
+	}
+	last_seen_map = val;
+	last_seen_addr = addr;
+	seen_map_count++;
+
+	if (abbrev && !new_val)
+		return;
 
 	if (addr != INVALID_VALUE)
 		printf("%016lx: ", addr);
@@ -457,6 +478,18 @@ static void print_mapping(uint64_t addr, struct memstat *mstat, uint64_t index)
 	printf("\n");
 }
 
+static void print_mapping_terminate(void)
+{
+	if (seen_map_count <= 1)
+		return;
+
+	printf("...\n");
+	printf("%016lx\n", last_seen_addr);
+
+	last_seen_map = INVALID_VALUE;
+	seen_map_count = 0;
+}
+
 static void print_header(struct memstat *mstat)
 {
 	printf("0x%lx [vma_start]\n", mstat->vma_start);
@@ -483,8 +516,9 @@ void memstat_print(struct memstat *mstat)
 	num_pages = count_virt_pages(mstat);
 
 	for (i = 0; i < num_pages; i++, addr += getpagesize()) {
-		print_mapping(addr, mstat, i);
+		print_mapping(addr, mstat, i, true);
 	}
+	print_mapping_terminate();
 }
 
 static void print_separator(void)
@@ -613,9 +647,9 @@ bool memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 			seen_first = true;
 		}
 
-		print_mapping(addr, mstat_a, i);
+		print_mapping(addr, mstat_a, i, false);
 		printf("               -> ");
-		print_mapping(INVALID_VALUE, mstat_b, i);
+		print_mapping(INVALID_VALUE, mstat_b, i, false);
 	}
 
 	if (!seen_first)
