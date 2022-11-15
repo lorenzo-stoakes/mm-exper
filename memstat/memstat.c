@@ -607,7 +607,7 @@ bool memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 	// This will be too fiddly to deal with manually so just output both.
 	if (mstat_a->vma_start != mstat_b->vma_start ||
 	    mstat_a->vma_end != mstat_b->vma_end) {
-		printf("VMA RANGE CHANGE. Outputting both for manual diff:-\\");
+		printf("VMA RANGE CHANGE. Outputting both for manual diff:-\n\n");
 		memstat_print(mstat_a);
 		printf("========\n");
 		memstat_print(mstat_b);
