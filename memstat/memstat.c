@@ -388,6 +388,7 @@ static void print_kpageflags(uint64_t flags)
 static uint64_t last_seen_map = INVALID_VALUE;
 static uint64_t last_seen_pfn;
 static uint64_t last_seen_addr;
+static uint64_t last_seen_index;
 static uint64_t seen_map_count;
 
 static void do_print_mapping(uint64_t addr, struct memstat *mstat, uint64_t index,
@@ -463,6 +464,22 @@ static void do_print_mapping(uint64_t addr, struct memstat *mstat, uint64_t inde
 	printf("\n");
 }
 
+static void print_abbrev(struct memstat *mstat)
+{
+	// Should never happen.
+	if (last_seen_map == INVALID_VALUE)
+		return;
+
+	if (seen_map_count > 2) {
+		printf("%016lx: (%lu more repetitions of above)\n", last_seen_addr, seen_map_count - 1);
+	} else if (seen_map_count == 2) {
+		do_print_mapping(last_seen_addr, mstat, last_seen_index,
+				 last_seen_pfn == INVALID_VALUE
+				 ? last_seen_map
+				 : last_seen_map | last_seen_pfn);
+	}
+}
+
 static void print_mapping(uint64_t addr, struct memstat *mstat, uint64_t index,
 			  bool abbrev)
 {
@@ -472,16 +489,14 @@ static void print_mapping(uint64_t addr, struct memstat *mstat, uint64_t index,
 		(pfn != last_seen_pfn && pfn != last_seen_pfn + 1);
 
 	if (abbrev && new_val) {
-		if(seen_map_count > 1) {
-			printf("...\n");
-			printf("%016lx\n", last_seen_addr);
-		}
-
+		print_abbrev(mstat);
 		seen_map_count = 0;
 	}
+
 	last_seen_map = val & ~PAGEMAP_PFN_MASK;
 	last_seen_pfn = pfn;
 	last_seen_addr = addr;
+	last_seen_index = index;
 	seen_map_count++;
 
 	if (abbrev && !new_val)
@@ -490,15 +505,12 @@ static void print_mapping(uint64_t addr, struct memstat *mstat, uint64_t index,
 	do_print_mapping(addr, mstat, index, val);
 }
 
-static void print_mapping_terminate(void)
+static void print_mapping_terminate(struct memstat *mstat)
 {
-	if (seen_map_count <= 1)
-		return;
-
-	printf("...\n");
-	printf("%016lx\n", last_seen_addr);
+	print_abbrev(mstat);
 
 	last_seen_map = INVALID_VALUE;
+	last_seen_index = 0;
 	last_seen_pfn = 0;
 	seen_map_count = 0;
 }
@@ -539,7 +551,7 @@ void memstat_print(struct memstat *mstat)
 	for (i = 0; i < num_pages; i++, addr += getpagesize()) {
 		print_mapping(addr, mstat, i, true);
 	}
-	print_mapping_terminate();
+	print_mapping_terminate(mstat);
 }
 
 static void print_separator(void)
