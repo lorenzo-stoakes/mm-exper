@@ -607,17 +607,13 @@ bool memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 		return false;
 
 	if (mstat_a == NULL) {
-		printf("====---- NEW B ----====\n");
-		memstat_print(mstat_b);
-
-		return true;
+		const bool printed = memstat_print(mstat_b);
+		return printed;
 	}
 
 	if (mstat_b == NULL) {
-		printf("====---- NEW A ----====\n");
-		memstat_print(mstat_a);
-
-		return true;
+		const bool printed = memstat_print(mstat_a);
+		return printed;
 	}
 
 	addr = mstat_a->vma_start;
@@ -626,11 +622,15 @@ bool memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 	// This will be too fiddly to deal with manually so just output both.
 	if (mstat_a->vma_start != mstat_b->vma_start ||
 	    mstat_a->vma_end != mstat_b->vma_end) {
-		printf("VMA RANGE CHANGE. Outputting both for manual diff:-\n\n");
-		memstat_print(mstat_a);
-		printf("========\n");
-		memstat_print(mstat_b);
-		return true;
+	       const bool printed = memstat_print(mstat_a);
+
+	       if (!printed)
+		       return false;
+
+	       printf("^^^^---- VMA RANGE CHANGE. Outputting both for manual diff ----vvvv\n");
+	       memstat_print(mstat_b);
+
+	       return true;
 	}
 
 	// We don't need to check vm_size because of above check.
