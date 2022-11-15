@@ -386,32 +386,16 @@ static void print_kpageflags(uint64_t flags)
 }
 
 static uint64_t last_seen_map = INVALID_VALUE;
+static uint64_t last_seen_pfn;
 static uint64_t last_seen_addr;
 static uint64_t seen_map_count;
 
-static void print_mapping(uint64_t addr, struct memstat *mstat, uint64_t index,
-			  bool abbrev)
+static void do_print_mapping(uint64_t addr, struct memstat *mstat, uint64_t index,
+			     uint64_t val)
 {
-	const uint64_t val = mstat->pagemaps[index];
 	const uint64_t pfn = get_pfn(val);
 	const bool have_pfn = pfn != INVALID_VALUE;
 	const bool swapped = CHECK_BIT(val, PAGEMAP_SWAPPED_BIT);
-	const bool new_val = val != last_seen_map;
-
-	if (abbrev && new_val) {
-		if(seen_map_count > 1) {
-			printf("...\n");
-			printf("%016lx\n", last_seen_addr);
-		}
-
-		seen_map_count = 0;
-	}
-	last_seen_map = val;
-	last_seen_addr = addr;
-	seen_map_count++;
-
-	if (abbrev && !new_val)
-		return;
 
 	if (addr != INVALID_VALUE)
 		printf("%016lx: ", addr);
@@ -455,7 +439,8 @@ static void print_mapping(uint64_t addr, struct memstat *mstat, uint64_t index,
 	else
 		printf("   ");
 
-	printf("/ ");
+	if (swapped || have_pfn)
+		printf("/ ");
 
 	if (swapped) {
 		const uint64_t offset = val >> PAGEMAP_SWAP_TYPE_NUM_BITS;
@@ -478,6 +463,33 @@ static void print_mapping(uint64_t addr, struct memstat *mstat, uint64_t index,
 	printf("\n");
 }
 
+static void print_mapping(uint64_t addr, struct memstat *mstat, uint64_t index,
+			  bool abbrev)
+{
+	const uint64_t val = mstat->pagemaps[index];
+	const uint64_t pfn = get_pfn(val);
+	const bool new_val = (val & ~PAGEMAP_PFN_MASK) != last_seen_map ||
+		(pfn != last_seen_pfn && pfn != last_seen_pfn + 1);
+
+	if (abbrev && new_val) {
+		if(seen_map_count > 1) {
+			printf("...\n");
+			printf("%016lx\n", last_seen_addr);
+		}
+
+		seen_map_count = 0;
+	}
+	last_seen_map = val & ~PAGEMAP_PFN_MASK;
+	last_seen_pfn = pfn;
+	last_seen_addr = addr;
+	seen_map_count++;
+
+	if (abbrev && !new_val)
+		return;
+
+	do_print_mapping(addr, mstat, index, val);
+}
+
 static void print_mapping_terminate(void)
 {
 	if (seen_map_count <= 1)
@@ -487,18 +499,27 @@ static void print_mapping_terminate(void)
 	printf("%016lx\n", last_seen_addr);
 
 	last_seen_map = INVALID_VALUE;
+	last_seen_pfn = 0;
 	seen_map_count = 0;
+}
+
+static void print_name(struct memstat *mstat)
+{
+	if (mstat->name != NULL)
+		printf("----==== %s ====---- \n\n", mstat->name);
 }
 
 static void print_header(struct memstat *mstat)
 {
+	print_name(mstat);
+
 	printf("0x%lx [vma_start]\n", mstat->vma_start);
 	printf("0x%lx [vma_end]\n\n", mstat->vma_end);
 	printf("vm_size=[%lu] rss=[%lu%s] ref=[%lu] anon=[%lu] anon_huge=[%lu] swap=[%lu] "
-	       "locked=[%lu]\nvm_flags=[%s] perms=[%s] offset=[%lu] name=[%s]\n\n",
+	       "locked=[%lu]\nvm_flags=[%s] perms=[%s] offset=[%lu]\n\n",
 	       mstat->vm_size, mstat->rss, mstat->rss_counted ? "*" : "", mstat->referenced, mstat->anon,
 	       mstat->anon_huge, mstat->swap, mstat->locked, mstat->vm_flags, mstat->perms,
-	       mstat->offset, mstat->name == NULL ? "" : mstat->name);
+	       mstat->offset);
 }
 
 void memstat_print(struct memstat *mstat)
@@ -550,7 +571,6 @@ bool memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 	uint64_t addr;
 	uint64_t num_pages;
 	bool seen_first = false;
-
 
 	if (mstat_a == NULL && mstat_b == NULL)
 		return false;
