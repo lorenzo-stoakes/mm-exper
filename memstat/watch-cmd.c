@@ -19,7 +19,6 @@ int main(int argc, char **argv)
 	struct memstat **mstats;
 	bool silent = false;
 	useconds_t interval = INTERVAL;
-	uint64_t counter = 1;
 
 	if (argc < 2) {
 		usage(argv[0]);
@@ -51,9 +50,6 @@ int main(int argc, char **argv)
 
 		if (!updated && !silent)
 			printf("(no updates)\n");
-
-		if (updated)
-			printf("^^-- COUNTER=%lu --^^\n", counter++);
 
 		memstat_free_all(mstats);
 		mstats = mstats_curr;
