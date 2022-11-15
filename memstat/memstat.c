@@ -385,12 +385,15 @@ static void print_kpageflags(uint64_t flags)
 #undef CHECK_FLAG
 }
 
-static void print_mapping(struct memstat *mstat, uint64_t index)
+static void print_mapping(uint64_t addr, struct memstat *mstat, uint64_t index)
 {
 	const uint64_t val = mstat->pagemaps[index];
 	const uint64_t pfn = get_pfn(val);
 	const bool have_pfn = pfn != INVALID_VALUE;
 	const bool swapped = CHECK_BIT(val, PAGEMAP_SWAPPED_BIT);
+
+	if (addr != INVALID_VALUE)
+		printf("%016lx: ", addr);
 
 	printf("%016lx: ", val); // raw
 
@@ -480,8 +483,7 @@ void memstat_print(struct memstat *mstat)
 	num_pages = count_virt_pages(mstat);
 
 	for (i = 0; i < num_pages; i++, addr += getpagesize()) {
-		printf("%lx: ", addr);
-		print_mapping(mstat, i);
+		print_mapping(addr, mstat, i);
 	}
 }
 
@@ -611,10 +613,9 @@ bool memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 			seen_first = true;
 		}
 
-		printf("%016lx: ", addr);
-		print_mapping(mstat_a, i);
+		print_mapping(addr, mstat_a, i);
 		printf("               -> ");
-		print_mapping(mstat_b, i);
+		print_mapping(INVALID_VALUE, mstat_b, i);
 	}
 
 	if (!seen_first)
