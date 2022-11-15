@@ -457,13 +457,13 @@ static void do_print_mapping(uint64_t addr, struct memstat *mstat, uint64_t inde
 
 		printf("/ ");
 		if (CHECK_BIT(flags, KPF_LRU))
-			printf("    LRU ");
+			printf("LRU ");
 		else
 			printf("NON-LRU ");
 
 
 		if (CHECK_BIT(flags, KPF_ACTIVE))
-			printf("  ACTIVE ");
+			printf("ACTIVE ");
 		else
 			printf("INACTIVE ");
 
