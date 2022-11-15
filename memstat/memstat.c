@@ -341,8 +341,9 @@ static void print_kpageflags(uint64_t flags)
 	if (CHECK_BIT(flags, KPF_##flag))	\
 		printf(name " ");
 
+	// We print active/referenced elsewhere.
+
 	// Alphabetical order.
-	CHECK_FLAG(ACTIVE, "Act");
 	CHECK_FLAG(ANON, "Ano");
 	if (mapped_to_disk && anon) // Handle overloaded flag.
 		printf("AnE ");
@@ -364,7 +365,6 @@ static void print_kpageflags(uint64_t flags)
 	CHECK_FLAG(OFFLINE, "Off");
 	CHECK_FLAG(PGTABLE, "Tbl");
 	CHECK_FLAG(RECLAIM, "Rcm");
-	CHECK_FLAG(REFERENCED, "Ref");
 	CHECK_FLAG(SLAB, "Slb");
 	CHECK_FLAG(SWAPBACKED, "SwB");
 	CHECK_FLAG(SWAPCACHE, "SwC");
@@ -454,6 +454,21 @@ static void do_print_mapping(uint64_t addr, struct memstat *mstat, uint64_t inde
 			print_kpageflags(flags);
 
 		printf("/ %lx ", pfn);
+
+		printf("/ ");
+		if (CHECK_BIT(flags, KPF_LRU))
+			printf("    LRU ");
+		else
+			printf("NON-LRU ");
+
+
+		if (CHECK_BIT(flags, KPF_ACTIVE))
+			printf("  ACTIVE ");
+		else
+			printf("INACTIVE ");
+
+		if (CHECK_BIT(flags, KPF_REFERENCED))
+			printf("REF ");
 
 		if (count != INVALID_VALUE)
 			printf("/ %lu", count);
