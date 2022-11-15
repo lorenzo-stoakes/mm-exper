@@ -401,8 +401,6 @@ static void do_print_mapping(uint64_t addr, struct memstat *mstat, uint64_t inde
 	if (addr != INVALID_VALUE)
 		printf("%016lx: ", addr);
 
-	printf("%016lx: ", val); // raw
-
 	// sD = soft-dirty
 	// xM = exclusive-mapped
 	// uW = uffd-wp write-protected
@@ -577,8 +575,6 @@ bool memstat_print(struct memstat *mstat)
 
 static void print_separator(void)
 {
-	for (int i = 0; i < 80; i++)
-		printf("=");
 	printf("\n");
 }
 
