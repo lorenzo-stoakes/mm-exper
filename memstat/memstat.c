@@ -337,51 +337,51 @@ static void print_kpageflags(uint64_t flags)
 	const bool mapped_to_disk = CHECK_BIT(flags, KPF_MAPPEDTODISK);
 	const bool anon = CHECK_BIT(flags, KPF_ANON);
 
-#define CHECK_FLAG(flag)			\
+#define CHECK_FLAG(flag, name)			\
 	if (CHECK_BIT(flags, KPF_##flag))	\
-		printf(STRINGIFY(flag) " ");
+		printf(name " ");
 
 	// Alphabetical order.
-	CHECK_FLAG(ACTIVE);
-	CHECK_FLAG(ANON);
+	CHECK_FLAG(ACTIVE, "Act");
+	CHECK_FLAG(ANON, "Ano");
 	if (mapped_to_disk && anon) // Handle overloaded flag.
-		printf("ANON_EXCLUSIVE ");
-	CHECK_FLAG(BUDDY);
-	CHECK_FLAG(COMPOUND_HEAD);
-	CHECK_FLAG(COMPOUND_TAIL);
-	CHECK_FLAG(DIRTY);
-	CHECK_FLAG(ERROR);
-	CHECK_FLAG(HUGE);
-	CHECK_FLAG(HWPOISON);
-	CHECK_FLAG(IDLE);
-	CHECK_FLAG(KSM);
-	CHECK_FLAG(LOCKED);
-	CHECK_FLAG(LRU);
+		printf("AnE ");
+	CHECK_FLAG(BUDDY, "Bud");
+	CHECK_FLAG(COMPOUND_HEAD, "CmH");
+	CHECK_FLAG(COMPOUND_TAIL, "CmT");
+	CHECK_FLAG(DIRTY, "Drt");
+	CHECK_FLAG(ERROR, "Err");
+	CHECK_FLAG(HUGE, "Hug");
+	CHECK_FLAG(HWPOISON, "xxH");
+	CHECK_FLAG(IDLE, "Idl");
+	CHECK_FLAG(KSM, "KSM");
+	CHECK_FLAG(LOCKED, "Lok");
+	CHECK_FLAG(LRU, "LRU");
 	if (mapped_to_disk && !anon)
-		printf("MAPPEDTODISK ");
-	CHECK_FLAG(MMAP);
-	CHECK_FLAG(NOPAGE);
-	CHECK_FLAG(OFFLINE);
-	CHECK_FLAG(PGTABLE);
-	CHECK_FLAG(RECLAIM);
-	CHECK_FLAG(REFERENCED);
-	CHECK_FLAG(SLAB);
-	CHECK_FLAG(SWAPBACKED);
-	CHECK_FLAG(SWAPCACHE);
-	CHECK_FLAG(THP);
-	CHECK_FLAG(UNEVICTABLE);
-	CHECK_FLAG(UPTODATE);
-	CHECK_FLAG(WRITEBACK);
-	CHECK_FLAG(ZERO_PAGE);
-	CHECK_FLAG(RESERVED);
-	CHECK_FLAG(MLOCKED);
-	CHECK_FLAG(PRIVATE);
-	CHECK_FLAG(PRIVATE_2);
-	CHECK_FLAG(OWNER_PRIVATE);
-	CHECK_FLAG(ARCH);
-	CHECK_FLAG(UNCACHED);
-	CHECK_FLAG(SOFTDIRTY);
-	CHECK_FLAG(ARCH_2);
+		printf("Mdk ");
+	CHECK_FLAG(MMAP, "MMp");
+	CHECK_FLAG(NOPAGE, "NoP");
+	CHECK_FLAG(OFFLINE, "Off");
+	CHECK_FLAG(PGTABLE, "Tbl");
+	CHECK_FLAG(RECLAIM, "Rcm");
+	CHECK_FLAG(REFERENCED, "Ref");
+	CHECK_FLAG(SLAB, "Slb");
+	CHECK_FLAG(SWAPBACKED, "SwB");
+	CHECK_FLAG(SWAPCACHE, "SwC");
+	CHECK_FLAG(THP, "THP");
+	CHECK_FLAG(UNEVICTABLE, "Une");
+	CHECK_FLAG(UPTODATE, "Upd");
+	CHECK_FLAG(WRITEBACK, "WrB");
+	CHECK_FLAG(ZERO_PAGE, "Zpg");
+	CHECK_FLAG(RESERVED, "Rsv");
+	CHECK_FLAG(MLOCKED, "Mlk");
+	CHECK_FLAG(PRIVATE, "Prv");
+	CHECK_FLAG(PRIVATE_2, "Pv2");
+	CHECK_FLAG(OWNER_PRIVATE, "OwP");
+	CHECK_FLAG(ARCH, "Ach");
+	CHECK_FLAG(UNCACHED, "Unc");
+	CHECK_FLAG(SOFTDIRTY, "DtS");
+	CHECK_FLAG(ARCH_2, "Ar2");
 #undef CHECK_FLAG
 }
 
@@ -397,27 +397,41 @@ static void print_mapping(struct memstat *mstat, uint64_t index)
 	// sD = soft-dirty
 	// xM = exclusive-mapped
 	// uW = uffd-wp write-protected
-	// f  = file
+	// fl = file
 	// Sw = swapped
-	// p  = present
+	// pr = present
 
 	if (CHECK_BIT(val, PAGEMAP_SOFT_DIRTY_BIT))
-		printf("sD ");
+		printf("Ds ");
+	else
+		printf("   ");
 
 	if (CHECK_BIT(val, PAGEMAP_EXCLUSIVE_MAPPED_BIT))
-		printf("xM ");
+		printf("Xm ");
+	else
+		printf("   ");
 
 	if (CHECK_BIT(val, PAGEMAP_UFFD_WP_BIT))
-		printf("uW ");
+		printf("Uw ");
+	else
+		printf("   ");
 
 	if (CHECK_BIT(val, PAGEMAP_IS_FILE_BIT))
-		printf("f  ");
+		printf("Fl ");
+	else
+		printf("   ");
 
 	if (swapped)
 		printf("Sw ");
+	else
+		printf("   ");
 
 	if (CHECK_BIT(val, PAGEMAP_PRESENT_BIT))
-		printf("p  ");
+		printf("Pr ");
+	else
+		printf("   ");
+
+	printf("/ ");
 
 	if (swapped) {
 		const uint64_t offset = val >> PAGEMAP_SWAP_TYPE_NUM_BITS;
@@ -428,13 +442,13 @@ static void print_mapping(struct memstat *mstat, uint64_t index)
 		const uint64_t flags = mstat->kpageflags[index];
 		const uint64_t count = mstat->kpagecounts[index];
 
-		printf("pfn=[%lx] ", pfn);
-
 		if (flags != INVALID_VALUE)
 			print_kpageflags(flags);
 
+		printf("/ %lx ", pfn);
+
 		if (count != INVALID_VALUE)
-			printf("mapcount=[%lu]", count);
+			printf("/ %lu", count);
 	}
 
 	printf("\n");
