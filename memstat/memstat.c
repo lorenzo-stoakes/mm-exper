@@ -501,9 +501,22 @@ bool memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 	uint64_t num_pages;
 	bool seen_first = false;
 
-	if (mstat_a == NULL || mstat_b == NULL) {
-		fprintf(stderr, "NULL input?");
+
+	if (mstat_a == NULL && mstat_b == NULL)
 		return false;
+
+	if (mstat_a == NULL) {
+		printf("====---- NEW B ----====\n");
+		memstat_print(mstat_b);
+
+		return true;
+	}
+
+	if (mstat_b == NULL) {
+		printf("====---- NEW A ----====\n");
+		memstat_print(mstat_a);
+
+		return true;
 	}
 
 	addr = mstat_a->vma_start;
@@ -608,9 +621,6 @@ bool memstat_print_diff_all(struct memstat **mstats_a, struct memstat **mstats_b
 		bool updated;
 		struct memstat *mstat_a = mstats_a[i];
 		struct memstat *mstat_b = mstats_b[i];
-
-		if (mstat_a == NULL || mstat_b == NULL)
-			break;
 
 		updated = memstat_print_diff(mstat_a, mstat_b);
 		if (!updated)

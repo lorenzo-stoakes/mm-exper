@@ -3,4 +3,5 @@ test-musl-malloc
 read-pageflags
 memstat/example-mstat
 memstat/memstat
+memstat/memstat-watch
 *.o
