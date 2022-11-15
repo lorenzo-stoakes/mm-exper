@@ -563,7 +563,9 @@ static bool ignored_mstat(struct memstat *mstat)
 		strcmp(mstat->name, "[heap]") == 0 ||
 		strcmp(mstat->name, "[stack]") == 0 ||
 		strncmp(mstat->name, "/usr/bin", sizeof("/usr/bin") - 1) == 0 ||
-		strncmp(mstat->name, "/usr/lib", sizeof("/usr/lib") - 1) == 0;
+		strncmp(mstat->name, "/usr/lib", sizeof("/usr/lib") - 1) == 0 ||
+		strncmp(mstat->name, "/var/cache", sizeof("/var/cache") - 1) == 0 ||
+		strncmp(mstat->name, "/usr/share", sizeof("/usr/share") - 1) == 0;
 }
 
 bool memstat_print(struct memstat *mstat)
