@@ -44,7 +44,7 @@ struct memstat *memstat_snapshot_remote(const char *pid, uint64_t vaddr);
 struct memstat **memstat_snapshot_all(const char *pid);
 
 // Detailed information to stdout.
-void memstat_print(struct memstat *mstat);
+bool memstat_print(struct memstat *mstat);
 
 // Print all memstat entries.
 void memstat_print_all(struct memstat **mstats);

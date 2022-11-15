@@ -515,10 +515,17 @@ static void print_mapping_terminate(struct memstat *mstat)
 	seen_map_count = 0;
 }
 
+static void do_print_name(const char *name)
+{
+	printf("----==== %s ====---- \n\n", name);
+}
+
 static void print_name(struct memstat *mstat)
 {
-	if (mstat->name != NULL)
-		printf("----==== %s ====---- \n\n", mstat->name);
+	if (mstat->name == NULL)
+		do_print_name("(anon)");
+	else
+		do_print_name(mstat->name);
 }
 
 static void print_header(struct memstat *mstat)
@@ -534,14 +541,26 @@ static void print_header(struct memstat *mstat)
 	       mstat->offset);
 }
 
-void memstat_print(struct memstat *mstat)
+static bool ignored_mstat(struct memstat *mstat)
+{
+	return
+		strcmp(mstat->name, "[vvar]") == 0 ||
+		strcmp(mstat->name, "[vdso]") == 0 ||
+		strcmp(mstat->name, "[vsyscall]") == 0 ||
+		strcmp(mstat->name, "[heap]") == 0 ||
+		strcmp(mstat->name, "[stack]") == 0 ||
+		strncmp(mstat->name, "/usr/bin", sizeof("/usr/bin") - 1) == 0 ||
+		strncmp(mstat->name, "/usr/lib", sizeof("/usr/lib") - 1) == 0;
+}
+
+bool memstat_print(struct memstat *mstat)
 {
 	uint64_t i;
 	uint64_t addr;
 	uint64_t num_pages;
 
-	if (mstat == NULL)
-		return;
+	if (mstat == NULL || (mstat->name != NULL && ignored_mstat(mstat)))
+		return false;
 
 	print_header(mstat);
 
@@ -552,6 +571,8 @@ void memstat_print(struct memstat *mstat)
 		print_mapping(addr, mstat, i, true);
 	}
 	print_mapping_terminate(mstat);
+
+	return true;
 }
 
 static void print_separator(void)
@@ -570,10 +591,8 @@ void memstat_print_all(struct memstat **mstats)
 		if (mstat == NULL)
 			break;
 
-		printf("\n");
-		print_separator();
-		printf("\n");
-		memstat_print(mstat);
+		if (memstat_print(mstat))
+			print_separator();
 	}
 }
 
