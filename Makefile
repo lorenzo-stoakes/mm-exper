@@ -14,6 +14,6 @@ read-pageflags: read-pageflags.c Makefile
 	gcc $(SHARED_OPTIONS) read-pageflags.c -o read-pageflags
 
 clean:
-	rm section-pointers test-musl-malloc
+	rm -f section-pointers test-musl-malloc
 
 .PHONY: all clean
