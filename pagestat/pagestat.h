@@ -9,7 +9,7 @@
 //   * /proc/$$/smaps
 //   * /proc/$$/pagemap
 //   * /proc/$$/kpageflag
-struct memstat {
+struct pagestat {
 	// Subset of VMA information.
 	uint64_t vma_start, vma_end;
 	const char perms[5];
@@ -35,28 +35,28 @@ struct memstat {
 
 // Grab snapshot for VMA containing specified virtual address. Returns NULL if
 // VMA cannot be found.
-struct memstat *memstat_snapshot(uint64_t vaddr);
+struct pagestat *pagestat_snapshot(uint64_t vaddr);
 
-// Same as memstat_snapshot() only can specify remote PID.
-struct memstat *memstat_snapshot_remote(const char *pid, uint64_t vaddr);
+// Same as pagestat_snapshot() only can specify remote PID.
+struct pagestat *pagestat_snapshot_remote(const char *pid, uint64_t vaddr);
 
 // Grab snapshot of all memory mappings.
-struct memstat **memstat_snapshot_all(const char *pid);
+struct pagestat **pagestat_snapshot_all(const char *pid);
 
 // Detailed information to stdout.
-bool memstat_print(struct memstat *mstat);
+bool pagestat_print(struct pagestat *ps);
 
-// Print all memstat entries.
-void memstat_print_all(struct memstat **mstats);
+// Print all pagestat entries.
+void pagestat_print_all(struct pagestat **pss);
 
-// Print diff between two mstats to stdout.
-bool memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b);
+// Print diff between two pagestats to stdout.
+bool pagestat_print_diff(struct pagestat *ps_a, struct pagestat *ps_b);
 
-// Print all memstat diffs. Return indicates if diff detected.
-bool memstat_print_diff_all(struct memstat **mstats_a, struct memstat **mstats_b);
+// Print all pagestat diffs. Return indicates if diff detected.
+bool pagestat_print_diff_all(struct pagestat **pss_a, struct pagestat **pss_b);
 
-// Free previously allocated mstat object.
-void memstat_free(struct memstat *mstat);
+// Free previously allocated pstat object.
+void pagestat_free(struct pagestat *ps);
 
-// Free bulk-allocated mstat objects.
-void memstat_free_all(struct memstat **mstats);
+// Free bulk-allocated pstat objects.
+void pagestat_free_all(struct pagestat **pss);

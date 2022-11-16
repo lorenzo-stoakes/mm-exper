@@ -1,4 +1,4 @@
-#include "memstat.h"
+#include "pagestat.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -16,7 +16,7 @@ static void usage(const char *bin)
 int main(int argc, char **argv)
 {
 	const char *pid;
-	struct memstat **mstats;
+	struct pagestat **pss;
 	bool silent = false;
 	useconds_t interval = INTERVAL;
 
@@ -37,22 +37,22 @@ int main(int argc, char **argv)
 		interval /= 10;
 	}
 
-	mstats = memstat_snapshot_all(pid);
+	pss = pagestat_snapshot_all(pid);
 
 	// Should have already reported error.
-	if (mstats == NULL)
+	if (pss == NULL)
 		return EXIT_FAILURE;
 
 	// We don't free because we never exit.
 	while (true) {
-		struct memstat **mstats_curr = memstat_snapshot_all(pid);
-		bool updated = memstat_print_diff_all(mstats, mstats_curr);
+		struct pagestat **pss_curr = pagestat_snapshot_all(pid);
+		bool updated = pagestat_print_diff_all(pss, pss_curr);
 
 		if (!updated && !silent)
 			printf("(no updates)\n");
 
-		memstat_free_all(mstats);
-		mstats = mstats_curr;
+		pagestat_free_all(pss);
+		pss = pss_curr;
 
 		usleep(interval);
 	}

@@ -1,4 +1,4 @@
-#include "memstat.h"
+#include "pagestat.h"
 
 #include "linux/kernel-page-flags.h"
 
@@ -111,7 +111,7 @@ static bool is_smap_header_field(const char *line, size_t len)
 	return line[len-1] != ':';
 }
 
-static bool get_smap_header_fields(struct memstat *ms, char *line)
+static bool get_smap_header_fields(struct pagestat *ms, char *line)
 {
 	char range[255], perms[5], dev_num[64], offset[64], name[255];
 	uint64_t inode;
@@ -137,7 +137,7 @@ static bool get_smap_header_fields(struct memstat *ms, char *line)
 	return true;
 }
 
-static bool get_smap_other_fields(struct memstat *ms, char *line, FILE *smaps_fp)
+static bool get_smap_other_fields(struct pagestat *ms, char *line, FILE *smaps_fp)
 {
 	size_t len = 0;
 
@@ -263,13 +263,13 @@ static uint64_t get_pfn(uint64_t val)
 	return val & PAGEMAP_PFN_MASK;
 }
 
-static uint64_t count_virt_pages(const struct memstat *mstat)
+static uint64_t count_virt_pages(const struct pagestat *ps)
 {
-	return mstat->vm_size * 1024 / getpagesize();
+	return ps->vm_size * 1024 / getpagesize();
 }
 
 // Stats aren't always updated quickly so also do our own counting.
-static void tweak_counts(struct memstat *mstat, uint64_t count)
+static void tweak_counts(struct pagestat *ps, uint64_t count)
 {
 	uint64_t i;
 	uint64_t rss_kib;
@@ -278,7 +278,7 @@ static void tweak_counts(struct memstat *mstat, uint64_t count)
 	// For now we just tweak RSS.
 
 	for (i = 0; i < count; i++) {
-		const uint64_t entry = mstat->pagemaps[i];
+		const uint64_t entry = ps->pagemaps[i];
 
 		if (has_pfn(entry))
 			pagecount++;
@@ -286,47 +286,47 @@ static void tweak_counts(struct memstat *mstat, uint64_t count)
 
 	rss_kib = pagecount * getpagesize() / 1024;
 
-	if (mstat->rss == rss_kib)
+	if (ps->rss == rss_kib)
 		return;
 
-	mstat->rss = rss_kib;
-	mstat->rss_counted = true;
+	ps->rss = rss_kib;
+	ps->rss_counted = true;
 }
 
-static bool get_pagetable_fields(const char *pid, struct memstat *mstat)
+static bool get_pagetable_fields(const char *pid, struct pagestat *ps)
 {
 	uint64_t i;
-	const uint64_t count = count_virt_pages(mstat);
-	const uint64_t offset = mstat->vma_start / getpagesize();
+	const uint64_t count = count_virt_pages(ps);
+	const uint64_t offset = ps->vma_start / getpagesize();
 
 	char path[512] = "/proc/";
 
 	strncat(path, pid, sizeof(path) - 1);
 	strncat(path, "/pagemap", sizeof(path) - 1);
 
-	mstat->pagemaps = malloc(count * sizeof(uint64_t));
+	ps->pagemaps = malloc(count * sizeof(uint64_t));
 	// These may not be populated depending on whether physical pages are mapped/
 	// we have permission to access these.
-	mstat->kpagecounts = calloc(count, sizeof(uint64_t));
-	mstat->kpageflags = calloc(count, sizeof(uint64_t));
+	ps->kpagecounts = calloc(count, sizeof(uint64_t));
+	ps->kpageflags = calloc(count, sizeof(uint64_t));
 
-	if (!read_u64s(mstat->pagemaps, path, offset, count, true))
+	if (!read_u64s(ps->pagemaps, path, offset, count, true))
 		return false; // We will free pagemaps elsewhere.
 
 	// Get page flags and counts if they exist.
 	for (i = 0; i < count; i++) {
-		const uint64_t entry = mstat->pagemaps[i];
+		const uint64_t entry = ps->pagemaps[i];
 		const uint64_t pfn = get_pfn(entry);
 
 		if (pfn == INVALID_VALUE)
 			continue;
 
 		// These can be set to INVALID_VALUE which we will check later.
-		mstat->kpagecounts[i] = read_u64("/proc/kpagecount", pfn, false);
-		mstat->kpageflags[i] = read_u64("/proc/kpageflags", pfn, false);
+		ps->kpagecounts[i] = read_u64("/proc/kpagecount", pfn, false);
+		ps->kpageflags[i] = read_u64("/proc/kpageflags", pfn, false);
 	}
 
-	tweak_counts(mstat, count);
+	tweak_counts(ps, count);
 
 	return true;
 }
@@ -391,7 +391,7 @@ static uint64_t last_seen_addr;
 static uint64_t last_seen_index;
 static uint64_t seen_map_count;
 
-static void do_print_mapping(uint64_t addr, struct memstat *mstat, uint64_t index,
+static void do_print_mapping(uint64_t addr, struct pagestat *ps, uint64_t index,
 			     uint64_t val)
 {
 	const uint64_t pfn = get_pfn(val);
@@ -447,8 +447,8 @@ static void do_print_mapping(uint64_t addr, struct memstat *mstat, uint64_t inde
 		printf("swap_type=[%lx] ", val & PAGEMAP_SWAP_TYPE_MASK);
 		printf("swap_offset=[%lx] ", offset & PAGEMAP_SWAP_OFFSET_MASK);
 	}  else if (have_pfn) {
-		const uint64_t flags = mstat->kpageflags[index];
-		const uint64_t count = mstat->kpagecounts[index];
+		const uint64_t flags = ps->kpageflags[index];
+		const uint64_t count = ps->kpagecounts[index];
 
 		if (flags != INVALID_VALUE)
 			print_kpageflags(flags);
@@ -477,7 +477,7 @@ static void do_print_mapping(uint64_t addr, struct memstat *mstat, uint64_t inde
 	printf("\n");
 }
 
-static void print_abbrev(struct memstat *mstat)
+static void print_abbrev(struct pagestat *ps)
 {
 	// Should never happen.
 	if (last_seen_map == INVALID_VALUE)
@@ -486,23 +486,23 @@ static void print_abbrev(struct memstat *mstat)
 	if (seen_map_count > 2) {
 		printf("%016lx: (%lu more repetitions of above)\n", last_seen_addr, seen_map_count - 1);
 	} else if (seen_map_count == 2) {
-		do_print_mapping(last_seen_addr, mstat, last_seen_index,
+		do_print_mapping(last_seen_addr, ps, last_seen_index,
 				 last_seen_pfn == INVALID_VALUE
 				 ? last_seen_map
 				 : last_seen_map | last_seen_pfn);
 	}
 }
 
-static void print_mapping(uint64_t addr, struct memstat *mstat, uint64_t index,
+static void print_mapping(uint64_t addr, struct pagestat *ps, uint64_t index,
 			  bool abbrev)
 {
-	const uint64_t val = mstat->pagemaps[index];
+	const uint64_t val = ps->pagemaps[index];
 	const uint64_t pfn = get_pfn(val);
 	const bool new_val = (val & ~PAGEMAP_PFN_MASK) != last_seen_map ||
 		(pfn != last_seen_pfn && pfn != last_seen_pfn + 1);
 
 	if (abbrev && new_val) {
-		print_abbrev(mstat);
+		print_abbrev(ps);
 		seen_map_count = 0;
 	}
 
@@ -515,12 +515,12 @@ static void print_mapping(uint64_t addr, struct memstat *mstat, uint64_t index,
 	if (abbrev && !new_val)
 		return;
 
-	do_print_mapping(addr, mstat, index, val);
+	do_print_mapping(addr, ps, index, val);
 }
 
-static void print_mapping_terminate(struct memstat *mstat)
+static void print_mapping_terminate(struct pagestat *ps)
 {
-	print_abbrev(mstat);
+	print_abbrev(ps);
 
 	last_seen_map = INVALID_VALUE;
 	last_seen_index = 0;
@@ -533,59 +533,59 @@ static void do_print_name(const char *name)
 	printf("----==== %s ====---- \n\n", name);
 }
 
-static void print_name(struct memstat *mstat)
+static void print_name(struct pagestat *ps)
 {
-	if (mstat->name == NULL)
+	if (ps->name == NULL)
 		do_print_name("(anon)");
 	else
-		do_print_name(mstat->name);
+		do_print_name(ps->name);
 }
 
-static void print_header(struct memstat *mstat)
+static void print_header(struct pagestat *ps)
 {
-	print_name(mstat);
+	print_name(ps);
 
-	printf("0x%lx [vma_start]\n", mstat->vma_start);
-	printf("0x%lx [vma_end]\n\n", mstat->vma_end);
+	printf("0x%lx [vma_start]\n", ps->vma_start);
+	printf("0x%lx [vma_end]\n\n", ps->vma_end);
 	printf("vm_size=[%lu] rss=[%lu%s] ref=[%lu] anon=[%lu] anon_huge=[%lu] swap=[%lu] "
 	       "locked=[%lu]\nvm_flags=[%s] perms=[%s] offset=[%lu]\n\n",
-	       mstat->vm_size, mstat->rss, mstat->rss_counted ? "*" : "", mstat->referenced, mstat->anon,
-	       mstat->anon_huge, mstat->swap, mstat->locked, mstat->vm_flags, mstat->perms,
-	       mstat->offset);
+	       ps->vm_size, ps->rss, ps->rss_counted ? "*" : "", ps->referenced, ps->anon,
+	       ps->anon_huge, ps->swap, ps->locked, ps->vm_flags, ps->perms,
+	       ps->offset);
 }
 
-static bool ignored_mstat(struct memstat *mstat)
+static bool ignored_ps(struct pagestat *ps)
 {
 	return
-		strcmp(mstat->name, "[vvar]") == 0 ||
-		strcmp(mstat->name, "[vdso]") == 0 ||
-		strcmp(mstat->name, "[vsyscall]") == 0 ||
-		strcmp(mstat->name, "[heap]") == 0 ||
-		strcmp(mstat->name, "[stack]") == 0 ||
-		strncmp(mstat->name, "/usr/bin", sizeof("/usr/bin") - 1) == 0 ||
-		strncmp(mstat->name, "/usr/lib", sizeof("/usr/lib") - 1) == 0 ||
-		strncmp(mstat->name, "/var/cache", sizeof("/var/cache") - 1) == 0 ||
-		strncmp(mstat->name, "/usr/share", sizeof("/usr/share") - 1) == 0;
+		strcmp(ps->name, "[vvar]") == 0 ||
+		strcmp(ps->name, "[vdso]") == 0 ||
+		strcmp(ps->name, "[vsyscall]") == 0 ||
+		strcmp(ps->name, "[heap]") == 0 ||
+		strcmp(ps->name, "[stack]") == 0 ||
+		strncmp(ps->name, "/usr/bin", sizeof("/usr/bin") - 1) == 0 ||
+		strncmp(ps->name, "/usr/lib", sizeof("/usr/lib") - 1) == 0 ||
+		strncmp(ps->name, "/var/cache", sizeof("/var/cache") - 1) == 0 ||
+		strncmp(ps->name, "/usr/share", sizeof("/usr/share") - 1) == 0;
 }
 
-bool memstat_print(struct memstat *mstat)
+bool pagestat_print(struct pagestat *ps)
 {
 	uint64_t i;
 	uint64_t addr;
 	uint64_t num_pages;
 
-	if (mstat == NULL || (mstat->name != NULL && ignored_mstat(mstat)))
+	if (ps == NULL || (ps->name != NULL && ignored_ps(ps)))
 		return false;
 
-	print_header(mstat);
+	print_header(ps);
 
-	addr = mstat->vma_start;
-	num_pages = count_virt_pages(mstat);
+	addr = ps->vma_start;
+	num_pages = count_virt_pages(ps);
 
 	for (i = 0; i < num_pages; i++, addr += getpagesize()) {
-		print_mapping(addr, mstat, i, true);
+		print_mapping(addr, ps, i, true);
 	}
-	print_mapping_terminate(mstat);
+	print_mapping_terminate(ps);
 
 	return true;
 }
@@ -595,53 +595,53 @@ static void print_separator(void)
 	printf("\n");
 }
 
-void memstat_print_all(struct memstat **mstats)
+void pagestat_print_all(struct pagestat **pss)
 {
 	int i;
 
 	for (i = 0; i < MAX_MAPS; i++) {
-		struct memstat *mstat = mstats[i];
-		if (mstat == NULL)
+		struct pagestat *ps = pss[i];
+		if (ps == NULL)
 			break;
 
-		if (memstat_print(mstat))
+		if (pagestat_print(ps))
 			print_separator();
 	}
 }
 
-bool memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
+bool pagestat_print_diff(struct pagestat *ps_a, struct pagestat *ps_b)
 {
 	uint64_t i;
 	uint64_t addr;
 	uint64_t num_pages;
 	bool seen_first = false;
 
-	if (mstat_a == NULL && mstat_b == NULL)
+	if (ps_a == NULL && ps_b == NULL)
 		return false;
 
-	if (mstat_a == NULL) {
-		const bool printed = memstat_print(mstat_b);
+	if (ps_a == NULL) {
+		const bool printed = pagestat_print(ps_b);
 		return printed;
 	}
 
-	if (mstat_b == NULL) {
-		const bool printed = memstat_print(mstat_a);
+	if (ps_b == NULL) {
+		const bool printed = pagestat_print(ps_a);
 		return printed;
 	}
 
-	addr = mstat_a->vma_start;
-	num_pages = count_virt_pages(mstat_a);
+	addr = ps_a->vma_start;
+	num_pages = count_virt_pages(ps_a);
 
 	// This will be too fiddly to deal with manually so just output both.
-	if (mstat_a->vma_start != mstat_b->vma_start ||
-	    mstat_a->vma_end != mstat_b->vma_end) {
-	       const bool printed = memstat_print(mstat_a);
+	if (ps_a->vma_start != ps_b->vma_start ||
+	    ps_a->vma_end != ps_b->vma_end) {
+	       const bool printed = pagestat_print(ps_a);
 
 	       if (!printed)
 		       return false;
 
 	       printf("^^^^---- VMA RANGE CHANGE. Outputting both for manual diff ----vvvv\n");
-	       memstat_print(mstat_b);
+	       pagestat_print(ps_b);
 
 	       return true;
 	}
@@ -649,47 +649,47 @@ bool memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 	// We don't need to check vm_size because of above check.
 
 #define COMPARE(field, fmt, ...)		\
-	if (mstat_a->field != mstat_b->field) {	\
+	if (ps_a->field != ps_b->field) {	\
 		seen_first = true;		\
 		printf(fmt, __VA_ARGS__);	\
 	}
 
-#define COMPARE_STR(field, fmt, ...)				\
-	{							\
-		const char *from = mstat_a->field == NULL	\
-			? "" : mstat_a->field;			\
-		const char *to = mstat_b->field == NULL		\
-			? "" : mstat_b->field;			\
-		if (strncmp(from, to, 255) != 0) {		\
-			seen_first = true;			\
-			printf(fmt, __VA_ARGS__);		\
-		}						\
+#define COMPARE_STR(field, fmt, ...)			\
+	{						\
+		const char *from = ps_a->field == NULL	\
+			? "" : ps_a->field;		\
+		const char *to = ps_b->field == NULL	\
+			? "" : ps_b->field;		\
+		if (strncmp(from, to, 255) != 0) {	\
+			seen_first = true;		\
+			printf(fmt, __VA_ARGS__);	\
+		}					\
 	}
 
-#define COMPARE_STR_UNSAFE(field, fmt, ...)			\
-	if (strcmp(mstat_a->field, mstat_b->field) != 0) {	\
-		seen_first = true;				\
-		printf(fmt, __VA_ARGS__);			\
+#define COMPARE_STR_UNSAFE(field, fmt, ...)		\
+	if (strcmp(ps_a->field, ps_b->field) != 0) {	\
+		seen_first = true;			\
+		printf(fmt, __VA_ARGS__);		\
 	}
 
-	COMPARE(rss, "rss=[%lu%s]->[%lu%s] ", mstat_a->rss,
-		mstat_a->rss_counted ? "*" : "",
-		mstat_b->rss, mstat_b->rss_counted ? "*" : "");
-	COMPARE(referenced, "ref=[%lu]->[%lu] ", mstat_a->referenced, mstat_b->referenced);
-	COMPARE(anon, "anon=[%lu]->[%lu] ", mstat_a->anon, mstat_b->anon);
-	COMPARE(anon_huge, "anon_huge=[%lu]->[%lu] ", mstat_a->anon_huge, mstat_b->anon_huge);
-	COMPARE(swap, "swap=[%lu]->[%lu] ", mstat_a->swap, mstat_b->swap);
-	COMPARE(locked, "locked=[%lu]->[%lu] ", mstat_a->locked, mstat_b->locked);
+	COMPARE(rss, "rss=[%lu%s]->[%lu%s] ", ps_a->rss,
+		ps_a->rss_counted ? "*" : "",
+		ps_b->rss, ps_b->rss_counted ? "*" : "");
+	COMPARE(referenced, "ref=[%lu]->[%lu] ", ps_a->referenced, ps_b->referenced);
+	COMPARE(anon, "anon=[%lu]->[%lu] ", ps_a->anon, ps_b->anon);
+	COMPARE(anon_huge, "anon_huge=[%lu]->[%lu] ", ps_a->anon_huge, ps_b->anon_huge);
+	COMPARE(swap, "swap=[%lu]->[%lu] ", ps_a->swap, ps_b->swap);
+	COMPARE(locked, "locked=[%lu]->[%lu] ", ps_a->locked, ps_b->locked);
 
 	if (seen_first) {
 		printf("\n");
 		seen_first = false;
 	}
 
-	COMPARE_STR(vm_flags, "vm_flags=[%s]->[%s] ", mstat_a->vm_flags, mstat_b->vm_flags);
-	COMPARE_STR_UNSAFE(perms, "perms=[%s]->[%s] ", mstat_a->perms, mstat_b->perms);
-	COMPARE(offset, "offset=[%lu]->[%lu] ", mstat_a->offset, mstat_b->offset);
-	COMPARE_STR(name, "name=[%s]->[%s] ", mstat_a->name, mstat_b->name);
+	COMPARE_STR(vm_flags, "vm_flags=[%s]->[%s] ", ps_a->vm_flags, ps_b->vm_flags);
+	COMPARE_STR_UNSAFE(perms, "perms=[%s]->[%s] ", ps_a->perms, ps_b->perms);
+	COMPARE(offset, "offset=[%lu]->[%lu] ", ps_a->offset, ps_b->offset);
+	COMPARE_STR(name, "name=[%s]->[%s] ", ps_a->name, ps_b->name);
 
 #undef COMPARE
 #undef COMPARE_STR
@@ -701,9 +701,9 @@ bool memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 	}
 
 	for (i = 0; i < num_pages; i++, addr += getpagesize()) {
-		if (mstat_a->pagemaps[i] == mstat_b->pagemaps[i] &&
-		    mstat_a->kpagecounts[i] == mstat_b->kpagecounts[i] &&
-		    mstat_a->kpageflags[i] == mstat_b->kpageflags[i])
+		if (ps_a->pagemaps[i] == ps_b->pagemaps[i] &&
+		    ps_a->kpagecounts[i] == ps_b->kpagecounts[i] &&
+		    ps_a->kpageflags[i] == ps_b->kpageflags[i])
 			continue;
 
 		if (!seen_first) {
@@ -711,31 +711,31 @@ bool memstat_print_diff(struct memstat *mstat_a, struct memstat *mstat_b)
 			seen_first = true;
 		}
 
-		print_mapping(addr, mstat_a, i, false);
+		print_mapping(addr, ps_a, i, false);
 		printf("               -> ");
-		print_mapping(INVALID_VALUE, mstat_b, i, false);
+		print_mapping(INVALID_VALUE, ps_b, i, false);
 	}
 
 	if (!seen_first)
 		return false;
 
 	printf("\n");
-	print_header(mstat_a);
+	print_header(ps_a);
 
 	return true;
 }
 
-bool memstat_print_diff_all(struct memstat **mstats_a, struct memstat **mstats_b)
+bool pagestat_print_diff_all(struct pagestat **pss_a, struct pagestat **pss_b)
 {
 	int i;
 	bool seen = false;
 
 	for (i = 0; i < MAX_MAPS; i++) {
 		bool updated;
-		struct memstat *mstat_a = mstats_a[i];
-		struct memstat *mstat_b = mstats_b[i];
+		struct pagestat *ps_a = pss_a[i];
+		struct pagestat *ps_b = pss_b[i];
 
-		updated = memstat_print_diff(mstat_a, mstat_b);
+		updated = pagestat_print_diff(ps_a, ps_b);
 		if (!updated)
 			continue;
 
@@ -767,10 +767,10 @@ static FILE *open_smaps(const char *pid)
 	return fp;
 }
 
-static struct memstat *get_memstat_snapshot(FILE *fp, const char *pid, uint64_t vaddr)
+static struct pagestat *get_pagestat_snapshot(FILE *fp, const char *pid, uint64_t vaddr)
 {
 	uint64_t from, to;
-	struct memstat *ret = NULL;
+	struct pagestat *ret = NULL;
 	bool found = false;
 	char *line = NULL;
 	size_t len = 0;
@@ -808,21 +808,21 @@ static struct memstat *get_memstat_snapshot(FILE *fp, const char *pid, uint64_t 
 
 	// Extract header line fields.
 	if (!get_smap_header_fields(ret, line)) {
-		memstat_free(ret);
+		pagestat_free(ret);
 		ret = NULL;
 		goto out;
 	}
 
 	// Now get the other fields.
 	if (!get_smap_other_fields(ret, line, fp)) {
-		memstat_free(ret);
+		pagestat_free(ret);
 		ret = NULL;
 		goto out;
 	}
 
 	// Finally, get page table fields.
 	if (!get_pagetable_fields(pid, ret)) {
-		memstat_free(ret);
+		pagestat_free(ret);
 		ret = NULL;
 		goto out;
 	}
@@ -834,75 +834,75 @@ out:
 	return ret;
 }
 
-struct memstat *memstat_snapshot(uint64_t vaddr)
+struct pagestat *pagestat_snapshot(uint64_t vaddr)
 {
 	FILE *fp = open_smaps("self");
-	struct memstat *ret = get_memstat_snapshot(fp, "self", vaddr);
+	struct pagestat *ret = get_pagestat_snapshot(fp, "self", vaddr);
 
 	fclose(fp);
 
 	return ret;
 }
 
-struct memstat *memstat_snapshot_remote(const char *pid, uint64_t vaddr)
+struct pagestat *pagestat_snapshot_remote(const char *pid, uint64_t vaddr)
 {
 	FILE *fp = open_smaps(pid);
-	struct memstat *ret = get_memstat_snapshot(fp, pid, vaddr);
+	struct pagestat *ret = get_pagestat_snapshot(fp, pid, vaddr);
 
 	fclose(fp);
 
 	return ret;
 }
 
-struct memstat **memstat_snapshot_all(const char *pid)
+struct pagestat **pagestat_snapshot_all(const char *pid)
 {
 	int i;
 	FILE *fp = open_smaps(pid);
-	struct memstat **ret = calloc(MAX_MAPS, sizeof(struct memstat*));
+	struct pagestat **ret = calloc(MAX_MAPS, sizeof(struct pagestat*));
 
 	for (i = 0; i < MAX_MAPS; i++) {
 		// Get next snapshot.
-		ret[i] = get_memstat_snapshot(fp, pid, INVALID_VALUE);
+		ret[i] = get_pagestat_snapshot(fp, pid, INVALID_VALUE);
 		if (ret[i] == NULL)
 			return ret;
 	}
 
 	fprintf(stderr, "ERROR: More than %d maps!", MAX_MAPS);
-	memstat_free_all(ret);
+	pagestat_free_all(ret);
 
 	return NULL;
 }
 
-void memstat_free(struct memstat* mstat)
+void pagestat_free(struct pagestat* ps)
 {
-	if (mstat == NULL)
+	if (ps == NULL)
 		return;
 
-	if (mstat->name != NULL)
-		free((void *)mstat->name);
+	if (ps->name != NULL)
+		free((void *)ps->name);
 
-	if (mstat->vm_flags != NULL)
-		free((void *)mstat->vm_flags);
+	if (ps->vm_flags != NULL)
+		free((void *)ps->vm_flags);
 
-	if (mstat->pagemaps != NULL)
-		free(mstat->pagemaps);
+	if (ps->pagemaps != NULL)
+		free(ps->pagemaps);
 
-	if (mstat->kpagecounts != NULL)
-		free(mstat->kpagecounts);
+	if (ps->kpagecounts != NULL)
+		free(ps->kpagecounts);
 
-	if (mstat->kpageflags != NULL)
-		free(mstat->kpageflags);
+	if (ps->kpageflags != NULL)
+		free(ps->kpageflags);
 
-	free(mstat);
+	free(ps);
 }
 
-void memstat_free_all(struct memstat **mstats)
+void pagestat_free_all(struct pagestat **pss)
 {
 	for (int i = 0; i < MAX_MAPS; i++) {
-		struct memstat *mstat = mstats[i];
-		if (mstat == NULL)
+		struct pagestat *ps = pss[i];
+		if (ps == NULL)
 			return;
 
-		memstat_free(mstat);
+		pagestat_free(ps);
 	}
 }

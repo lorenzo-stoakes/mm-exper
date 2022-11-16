@@ -1,4 +1,4 @@
-#include "memstat.h"
+#include "pagestat.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -13,7 +13,7 @@ static void usage(const char *bin)
 int main(int argc, char **argv)
 {
 	const char *pid;
-	struct memstat **mstats;
+	struct pagestat **pss;
 	bool silent = false;
 
 	if (argc < 2) {
@@ -31,16 +31,16 @@ int main(int argc, char **argv)
 		silent = true;
 	}
 
-	mstats = memstat_snapshot_all(pid);
+	pss = pagestat_snapshot_all(pid);
 
 	// Should have already reported error.
-	if (mstats == NULL)
+	if (pss == NULL)
 		return EXIT_FAILURE;
 
 	if (!silent)
-		memstat_print_all(mstats);
+		pagestat_print_all(pss);
 
-	memstat_free_all(mstats);
+	pagestat_free_all(pss);
 
 	return EXIT_SUCCESS;
 }
