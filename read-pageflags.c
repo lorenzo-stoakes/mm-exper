@@ -385,5 +385,15 @@ int main(void)
 	wait(NULL);
 	print_kpageflags_virt(ptr6, "mmap anon, shared, post fork done");
 
+	munmap(ptr6, 4096);
+
+	char *ptr7 = mmap(NULL, 2 * 1024 * 1024, PROT_READ | PROT_WRITE,
+			  MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE | MAP_HUGETLB, -1, 0);
+	if (ptr7 == MAP_FAILED) {
+		perror("mmap (7)");
+		return EXIT_FAILURE;
+	}
+	print_kpageflags_virt(ptr7, "mmap anon, hugetlb");
+
 	return EXIT_SUCCESS;
 }
