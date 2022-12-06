@@ -331,6 +331,21 @@ int main(void)
 
 	print_kpageflags_virt(ptr4, "mmap anon, pre-fork");
 
+	fd = open("test.txt", O_RDWR);
+	if (fd == -1) {
+		perror("open test.txt");
+		return EXIT_FAILURE;
+	}
+	char *ptr4b = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
+			   MAP_PRIVATE | MAP_POPULATE, fd, 0);
+	if (ptr4b == MAP_FAILED) {
+		perror("mmap (4b)");
+		return EXIT_FAILURE;
+	}
+	close(fd);
+
+	print_kpageflags_virt(ptr4b, "mmap private file, pre-fork");
+
 	pid_t p = fork();
 	if (p == 0) {
 		print_kpageflags_virt(ptr4, "mmap anon, forked");
@@ -341,12 +356,18 @@ int main(void)
 		sleep(1);
 		print_kpageflags_virt(ptr4, "mmap anon, forked, modified (after sleep)");
 
+		print_kpageflags_virt(ptr4b, "mmap private file, post-fork");
+		ptr4b[3] = 'x';
+		print_kpageflags_virt(ptr4b, "mmap private file, post-fork (modify)");
+
 		if (ptr4[0] == 'y')
 			ptr4[0] = 'x';
 
 		sleep(1);
 
-		print_kpageflags_virt(ptr4, "IVG: mmap anon, forked, modified (after sleep, modify)");
+		print_kpageflags_virt(ptr4, "mmap anon, forked, modified (after sleep, modify)");
+
+		print_kpageflags_virt(ptr4b, "mmap private file, post-fork (after sleep, modify)");
 
 		return EXIT_SUCCESS;
 	}
