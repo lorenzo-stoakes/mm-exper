@@ -342,6 +342,14 @@ int main(void)
 		perror("mmap (4b)");
 		return EXIT_FAILURE;
 	}
+
+	char *ptr4c = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
+			   MAP_PRIVATE, fd, 0);
+	if (ptr4c == MAP_FAILED) {
+		perror("mmap (4c)");
+		return EXIT_FAILURE;
+	}
+
 	close(fd);
 
 	print_kpageflags_virt(ptr4b, "mmap private file, pre-fork");
@@ -362,6 +370,9 @@ int main(void)
 
 		if (ptr4[0] == 'y')
 			ptr4[0] = 'x';
+
+		ptr4c[3] = 'x'; // Trigger CoW
+		print_kpageflags_virt(ptr4c, "mmap private file, post-fork, not populated, CoW (modify)");
 
 		sleep(1);
 
