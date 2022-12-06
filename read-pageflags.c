@@ -381,8 +381,11 @@ int main(void)
 
 	char *ptr5 = mmap(NULL, 4097, PROT_READ | PROT_WRITE,
 			  MAP_SHARED | MAP_POPULATE, fd, 0);
-
 	close(fd);
+	if (ptr5 == MAP_FAILED) {
+		perror("mmap (5)");
+		return EXIT_FAILURE;
+	}
 
 	print_kpageflags_virt(ptr5, "mmap file page 1, all bytes");
 	print_kpageflags_virt(ptr5 + 4096, "mmap file page 2, all bytes");
