@@ -387,6 +387,7 @@ int main(void)
 
 	munmap(ptr6, 4096);
 
+	// Must have set up hugetlb pages in /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
 	char *ptr7 = mmap(NULL, 2 * 1024 * 1024, PROT_READ | PROT_WRITE,
 			  MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE | MAP_HUGETLB, -1, 0);
 	if (ptr7 == MAP_FAILED) {
@@ -394,6 +395,11 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 	print_kpageflags_virt(ptr7, "mmap anon, hugetlb");
-
+	ptr7[0] = 'x';
+	ptr7[4096] = 'y';
+	ptr7[2 * 1024 *1024 - 1] = 'z';
+	print_kpageflags_virt(ptr7, "mmap anon, hugetlb, post sleep, modification");
+	sleep(1);
+	print_kpageflags_virt(ptr7, "mmap anon, hugetlb, post sleep, modification");
 	return EXIT_SUCCESS;
 }
