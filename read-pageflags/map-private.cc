@@ -37,7 +37,7 @@ using namespace std::chrono_literals;
 
 #define MASK_FLAGS
 static constexpr const char* test_path = "test2.txt";
-static constexpr auto delay = 100ms;
+static constexpr auto delay = 500ms;
 
 namespace
 {
