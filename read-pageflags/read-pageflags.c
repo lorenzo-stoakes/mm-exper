@@ -279,6 +279,22 @@ static bool print_kpageflags_virt(const void *ptr, const char *descr)
 	return true;
 }
 
+static bool check_hugetlb(void)
+{
+	static const char *path = "/sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages";
+	int val = 0;
+
+	FILE *fp = fopen(path, "r");
+	if (fp == NULL)
+		return false;
+
+	// If this fails we default to 0 anyway and assume false.
+	fscanf(fp, "%d", &val);
+	fclose(fp);
+
+	return val > 0;
+}
+
 int main(void)
 {
 	// First allocate a page of memory from the kernel, force _actual_
@@ -445,6 +461,9 @@ int main(void)
 	munmap(ptr6, 4096);
 
 	// Must have set up hugetlb pages in /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+	if (!check_hugetlb())
+		return EXIT_SUCCESS;
+
 	char *ptr7 = mmap(NULL, 2 * 1024 * 1024, PROT_READ | PROT_WRITE,
 			  MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE | MAP_HUGETLB, -1, 0);
 	if (ptr7 == MAP_FAILED) {
