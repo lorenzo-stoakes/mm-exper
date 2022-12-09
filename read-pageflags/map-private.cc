@@ -15,6 +15,9 @@
 
 #include "read-pageflags.h"
 
+// Set to periodically write to private mapping.
+//#define WRITE_PRIVATE_MAPPING
+
 /*
  * -- MAP_PRIVATE experiment --
  *
@@ -225,15 +228,17 @@ int main()
 			std::this_thread::sleep_for(delay);
 
 			count++;
+#ifdef WRITE_PRIVATE_MAPPING
 			// Write every 10 * interval (5s by default).
 			if (count % 10 == 0) {
 				// Should contain newline.
-				std::cout << "write, was " << (char *)strptr;
+				std::cout << "PRIVATE write, was " << (char *)strptr;
 				// Just in case it doesn't...
 				std::cout.flush();
 				const char chr = strptr[1];
 				strptr[1] = next_char(chr);
 			}
+#endif
 		}
 	});
 
