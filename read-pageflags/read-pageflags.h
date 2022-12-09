@@ -14,6 +14,22 @@ uint64_t read_pagemap(const void *ptr);
 // If unable to retrieve, returns INVALID_VALUE.
 uint64_t read_pfn(const void *ptr);
 
+// Convert pagemap value to PFN.
+// If unable to retrieve, returns INVALID_VALUE.
+uint64_t extract_pfn(uint64_t val);
+
 // Print kpageflags for the page containing the specified pointer.
 // Return value indicates whether succeeded.
 bool print_kpageflags_virt(const void *ptr, const char *descr);
+
+// Retrieves kpageflags as described at
+// https://www.kernel.org/doc/html/latest/admin-guide/mm/pagemap.html for the
+// specified physical page at PFN `pfn`.
+// If unable to retrieve, returns INVALID_VALUE.
+uint64_t read_kpageflags(uint64_t pfn);
+
+// Retrieves page map count as described at
+// https://www.kernel.org/doc/html/latest/admin-guide/mm/pagemap.html for the
+// specified physical page at PFN `pfn`.
+// If unable to retrieve, returns INVALID_VALUE.
+uint64_t read_mapcount(uint64_t pfn);

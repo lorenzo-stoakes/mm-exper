@@ -86,43 +86,22 @@ done_close:
 	return ret;
 }
 
-// Invokes read_pagemap() and decodes physical Page Frame Number (PFN) from the
-// obtained value.
-// If unable to retrieve, returns INVALID_VALUE.
-static uint64_t get_pfn(const void *ptr, uint64_t val)
+uint64_t extract_pfn(uint64_t val)
 {
 	if (val == INVALID_VALUE)
 		return INVALID_VALUE;
 
 	if (CHECK_BIT(val, PAGEMAP_SWAPPED_BIT)) {
-		fprintf(stderr, "%p: physical page swapped out!\n", ptr);
+		fprintf(stderr, "physical page swapped out!\n");
 		return INVALID_VALUE;
 	}
 
 	if (!CHECK_BIT(val, PAGEMAP_PRESENT_BIT)) {
-		fprintf(stderr, "%p: physical page not present\n", ptr);
+		fprintf(stderr, "physical page not present\n");
 		return INVALID_VALUE;
 	}
 
 	return val & PAGEMAP_PFN_MASK;
-}
-
-// Retrieves kpageflags as described at
-// https://www.kernel.org/doc/html/latest/admin-guide/mm/pagemap.html for the
-// specified physical page at PFN `pfn`.
-// If unable to retrieve, returns INVALID_VALUE.
-static uint64_t get_kpageflags(uint64_t pfn)
-{
-	return read_u64("/proc/kpageflags", pfn * sizeof(uint64_t));
-}
-
-// Retrieves page map count as described at
-// https://www.kernel.org/doc/html/latest/admin-guide/mm/pagemap.html for the
-// specified physical page at PFN `pfn`.
-// If unable to retrieve, returns INVALID_VALUE.
-static uint64_t get_mapcount(uint64_t pfn)
-{
-	return read_u64("/proc/kpagecount", pfn * sizeof(uint64_t));
 }
 
 // Output all set flags from the specified kpageflags value.
@@ -230,7 +209,17 @@ uint64_t read_pagemap(const void *ptr)
 
 uint64_t read_pfn(const void *ptr)
 {
-	return get_pfn(ptr, read_pagemap(ptr));
+	return extract_pfn(read_pagemap(ptr));
+}
+
+uint64_t read_kpageflags(uint64_t pfn)
+{
+	return read_u64("/proc/kpageflags", pfn * sizeof(uint64_t));
+}
+
+uint64_t read_mapcount(uint64_t pfn)
+{
+	return read_u64("/proc/kpagecount", pfn * sizeof(uint64_t));
 }
 
 bool print_kpageflags_virt(const void *ptr, const char *descr)
@@ -241,7 +230,7 @@ bool print_kpageflags_virt(const void *ptr, const char *descr)
 
 	print_pagemap_flags(pagemap_val);
 
-	const uint64_t pfn = get_pfn(ptr, pagemap_val);
+	const uint64_t pfn = extract_pfn(pagemap_val);
 	if (pfn == INVALID_VALUE) {
 		printf("(invalid value)");
 		return false;
@@ -250,12 +239,12 @@ bool print_kpageflags_virt(const void *ptr, const char *descr)
 		return false;
 	}
 
-	const uint64_t kpf = get_kpageflags(pfn);
+	const uint64_t kpf = read_kpageflags(pfn);
 	if (kpf == INVALID_VALUE) {
 		printf("(cannot retrieve kpageflags)\n");
 		return false;
 	}
-	const uint64_t mapcount = get_mapcount(pfn);
+	const uint64_t mapcount = read_mapcount(pfn);
 	if (mapcount == INVALID_VALUE) {
 		printf("(cannot retrieve kpagecount)\n");
 		return false;
