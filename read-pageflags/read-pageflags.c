@@ -283,8 +283,8 @@ static bool check_hugetlb(void)
 {
 	static const char *path = "/sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages";
 	int val = 0;
-
 	FILE *fp = fopen(path, "r");
+
 	if (fp == NULL)
 		return false;
 
