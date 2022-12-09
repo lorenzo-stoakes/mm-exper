@@ -234,23 +234,21 @@ bool print_kpageflags_virt_precalc(const void *ptr,
 		return false;
 	}
 
+	printf("pfn=%lu: ", pfn);
+
 	if (kpageflags == INVALID_VALUE) {
 		printf("(cannot retrieve kpageflags) [%s]\n", descr);
 		return false;
 	}
 
-	if (mapcount == INVALID_VALUE) {
-		printf("(cannot retrieve kpagecount) [%s]\n", descr);
-		return false;
-	}
-
-	printf("pfn=%lu: ", pfn);
-
 	const int refcount = get_refcount(pfn);
 	if (refcount != -1)
 		printf("refcount=%d ", refcount);
 
-	printf("mapcount=%lu ", mapcount);
+	if (mapcount == INVALID_VALUE)
+		printf("mapcount=(failed) ");
+	else
+		printf("mapcount=%lu ", mapcount);
 
 	print_kpageflags(kpageflags);
 
