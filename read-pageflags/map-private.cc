@@ -85,9 +85,9 @@ void setup_file()
 } // namespace
 
 struct page_state {
-	explicit page_state(const void* ptr)
+	explicit page_state(volatile char* ptr)
 		: ptr{ptr}
-		, pagemap{read_pagemap(ptr)}
+		, pagemap{read_pagemap((const void *)ptr)}
 		, pfn{extract_pfn(pagemap)}
 	{
 		if (pfn == INVALID_VALUE) {
@@ -100,11 +100,6 @@ struct page_state {
 		mapcount = read_mapcount(pfn);
 	}
 
-	explicit page_state(volatile char* strptr)
-		: page_state((const void *)strptr)
-	{
-	}
-
 	bool operator==(const page_state& that)
 	{
 		return pagemap == that.pagemap &&
@@ -113,7 +108,7 @@ struct page_state {
 			mapcount == that.mapcount;
 	}
 
-	const void* ptr;
+	volatile char* ptr;
 	uint64_t pagemap;
 	uint64_t pfn;
 	uint64_t kpageflags;
@@ -144,7 +139,7 @@ struct page_state {
 
 	void print(const char *descr) const
 	{
-		print_kpageflags_virt_precalc(ptr, pagemap, pfn,
+		print_kpageflags_virt_precalc((const void*)ptr, pagemap, pfn,
 					      kpageflags, mapcount,
 					      descr);
 	}
@@ -204,6 +199,8 @@ int main()
 				curr.print("CHANGED private ptr");
 				prev = curr;
 			}
+			// We may need to fault the page back in, so access it.
+			(volatile void)strptr[0];
 
 			std::this_thread::sleep_for(delay);
 		}
