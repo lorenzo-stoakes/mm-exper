@@ -120,6 +120,13 @@ struct page_state {
 		ret.kpageflags &= ~(1UL << KPF_DIRTY);
 		return ret;
 	}
+
+	void print(const char *descr) const
+	{
+		print_kpageflags_virt_precalc(ptr, pagemap, pfn,
+					      kpageflags, mapcount,
+					      descr);
+	}
 };
 
 int main()
