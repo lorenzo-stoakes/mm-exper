@@ -160,7 +160,7 @@ int main()
 		if (strptr == nullptr)
 			throw std::runtime_error("can't map shared");
 
-		print_kpageflags_virt((char *)strptr, "shared ptr");
+		print_kpageflags_virt((char *)strptr, "FIRST shared ptr");
 
 		page_state prev(strptr);
 
@@ -189,7 +189,7 @@ int main()
 		if (strptr == nullptr)
 			throw std::runtime_error("can't map private");
 
-		print_kpageflags_virt((char *)strptr, "1st private ptr");
+		print_kpageflags_virt((char *)strptr, "FIRST private ptr");
 
 		page_state prev(strptr);
 
