@@ -79,8 +79,9 @@ void setup_file()
 } // namespace
 
 struct page_state {
-	explicit page_state(const void *ptr)
-		: pagemap{read_pagemap(ptr)}
+	explicit page_state(const void* ptr)
+		: ptr{ptr}
+		, pagemap{read_pagemap(ptr)}
 		, pfn{extract_pfn(pagemap)}
 	{
 		if (pfn == INVALID_VALUE) {
@@ -93,7 +94,7 @@ struct page_state {
 		mapcount = read_mapcount(pfn);
 	}
 
-	explicit page_state(volatile char *strptr)
+	explicit page_state(volatile char* strptr)
 		: page_state((const void *)strptr)
 	{
 	}
@@ -106,6 +107,7 @@ struct page_state {
 			mapcount == that.mapcount;
 	}
 
+	const void* ptr;
 	uint64_t pagemap;
 	uint64_t pfn;
 	uint64_t kpageflags;
