@@ -356,10 +356,16 @@ bool print_flags_virt_precalc(const void *ptr,
 			      const struct map_data* mapfields,
 			      const char *descr)
 {
+	printf("%p: ", ptr);
+
 	// TODO
 	(void)mapfields;
 
-	printf("%p: ", ptr);
+	if (pagemap == INVALID_VALUE) {
+		printf("(invalid pagemap) [%s]\n", descr);
+		return false;
+	}
+
 	print_pagemap_flags(pagemap);
 
 	if (pfn == INVALID_VALUE) {
@@ -398,6 +404,15 @@ bool print_flags_virt(const void *ptr, const char *descr)
 	struct map_data mapfields;
 	const bool gotfields = read_mapdata(ptr, &mapfields);
 	const uint64_t pagemap = read_pagemap(ptr);
+
+	if (pagemap == INVALID_VALUE)
+		return print_flags_virt_precalc(ptr,
+						INVALID_VALUE,
+						INVALID_VALUE,
+						INVALID_VALUE,
+						INVALID_VALUE,
+						gotfields ? &mapfields : NULL,
+						descr);
 
 	const uint64_t pfn = extract_pfn(pagemap);
 	if (pfn == INVALID_VALUE || 0)
