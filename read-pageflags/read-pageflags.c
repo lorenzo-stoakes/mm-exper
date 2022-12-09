@@ -9,6 +9,9 @@
 
 #include "linux/kernel-page-flags.h"
 
+// Define this to output noisy additional /proc/self/maps data
+//#define EXTENDED_MAP_DATA
+
 // Imported from include/linux/kernel-page-flags.h
 #define KPF_RESERVED		32
 #define KPF_MLOCKED		33
@@ -350,6 +353,19 @@ out:
 	return ret;
 }
 
+static void print_map_data(const struct map_data* mapfields)
+{
+	printf("[%s] ", mapfields->perms);
+#ifdef EXTENDED_MAP_DATA
+	if (mapfields->offset > 0)
+		printf("offset=[%lu] ", mapfields->offset);
+	if (mapfields->inode > 0)
+		printf("inode=[%lu] ", mapfields->inode);
+	if (strnlen(mapfields->name, 255) > 0)
+		printf("name=[%s] ", mapfields->name);
+#endif
+}
+
 bool print_flags_virt_precalc(const void *ptr,
 			      uint64_t pagemap, uint64_t pfn,
 			      uint64_t kpageflags, uint64_t mapcount,
@@ -358,8 +374,8 @@ bool print_flags_virt_precalc(const void *ptr,
 {
 	printf("%p: ", ptr);
 
-	// TODO
-	(void)mapfields;
+	if (mapfields != NULL)
+		print_map_data(mapfields);
 
 	if (pagemap == INVALID_VALUE) {
 		printf("(invalid pagemap) [%s]\n", descr);
