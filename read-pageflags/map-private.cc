@@ -162,8 +162,8 @@ int main()
 
 			page_state curr(strptr);
 			if (prev.strip_dirty_flag() != curr.strip_dirty_flag()) {
-				print_kpageflags_virt((char *)strptr, "CHANGED shared ptr");
-				prev = page_state(strptr);
+				curr.print("CHANGED shared ptr");
+				prev = curr;
 			}
 
 			curr_chr = curr_chr == 'z' ? 'a' : curr_chr + 1;
@@ -185,10 +185,10 @@ int main()
 		page_state prev(strptr);
 
 		while (true) {
-			// We only show if the file has changed.
-			if (prev != page_state(strptr)) {
-				print_kpageflags_virt((char *)strptr, "private read");
-				prev = page_state(strptr);
+			page_state curr(strptr);
+			if (prev != curr) {
+				curr.print("CHANGED private ptr");
+				prev = curr;
 			}
 
 			std::this_thread::sleep_for(delay);
