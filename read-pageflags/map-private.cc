@@ -176,14 +176,11 @@ int main()
 		print_flags_virt((char *)strptr, "FIRST shared ptr");
 
 		page_state prev(strptr);
-		std::string prev_str = (char *)strptr;
 
 		char curr_chr = 'a';
+		int count = 0;
 
 		while (true) {
-			if (prev_str != (char *)strptr)
-				std::cout << "ODD: Shared map changed??\n";
-
 			strptr[0] = curr_chr;
 			std::this_thread::sleep_for(delay);
 
@@ -194,8 +191,11 @@ int main()
 				prev = curr;
 			}
 
+			if (msync((void *)strptr, 4096, MS_INVALIDATE) != 0)
+				perror("msync");
+
 			curr_chr = next_char(curr_chr);
-			prev_str = (char *)strptr;
+			count++;
 		}
 	});
 
