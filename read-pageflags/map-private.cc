@@ -131,6 +131,7 @@ struct page_state {
 		ret.kpageflags &= ~(1UL << KPF_ACTIVE);
 		ret.kpageflags &= ~(1UL << KPF_REFERENCED);
 		ret.kpageflags &= ~(1UL << KPF_WRITEBACK);
+		ret.kpageflags &= ~(1UL << KPF_LRU);
 
 		return ret;
 	}
