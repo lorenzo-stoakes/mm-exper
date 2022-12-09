@@ -52,7 +52,7 @@ namespace
 
 volatile char* map_shared(bool populate)
 {
-	const int fd = open("test2.txt", O_RDWR);
+	const int fd = open(test_path, O_RDWR);
 
 	void *ret = mmap(nullptr, 4096, PROT_READ | PROT_WRITE,
 			 MAP_SHARED | (populate ? MAP_POPULATE : 0), fd, 0);
@@ -63,7 +63,7 @@ volatile char* map_shared(bool populate)
 
 volatile char* map_private(bool populate)
 {
-	const int fd = open("test2.txt", O_RDWR);
+	const int fd = open(test_path, O_RDWR);
 
 	void *ret = mmap(nullptr, 4096, PROT_READ | PROT_WRITE,
 			 MAP_PRIVATE | (populate ? MAP_POPULATE : 0), fd, 0);
