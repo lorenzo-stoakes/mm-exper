@@ -10,6 +10,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+#include "linux/kernel-page-flags.h"
+
 #include "read-pageflags.h"
 
 /*
@@ -96,11 +98,37 @@ int main()
 
 		print_kpageflags_virt((char *)strptr, "shared ptr");
 
+		// We'll gamble that extract_pfn() won't return INVALID_VALUE.
+		uint64_t prev_pagemap = read_pagemap((const void *)strptr);
+		uint64_t prev_kpageflags = read_kpageflags(extract_pfn(prev_pagemap));
+		uint64_t prev_mapcount = read_mapcount(extract_pfn(prev_pagemap));
+
 		char curr = 'a';
 
 		while (true) {
 			strptr[0] = curr;
 			std::this_thread::sleep_for(delay);
+
+			const uint64_t pagemap_val = read_pagemap((const void *)strptr);
+			const uint64_t pfn = extract_pfn(pagemap_val);
+			const uint64_t kpageflags_val = pfn == INVALID_VALUE ? 0 : read_kpageflags(pfn);
+			const uint64_t mapcount_val = pfn == INVALID_VALUE ? 0 : read_mapcount(pfn);
+
+			bool flags_changed = kpageflags_val != prev_kpageflags;
+			// Mask out dirty flag to stop spam.
+			if (flags_changed) {
+				const uint64_t delta = prev_kpageflags ^ kpageflags_val;
+				if (delta & (1UL << KPF_DIRTY))
+					flags_changed = false;
+			}
+
+			if (pfn == INVALID_VALUE || pagemap_val != prev_pagemap ||
+			    flags_changed || mapcount_val != prev_mapcount) {
+				print_kpageflags_virt((char *)strptr, "CHANGED shared ptr");
+				prev_pagemap = pagemap_val;
+				prev_kpageflags = kpageflags_val;
+				prev_mapcount = mapcount_val;
+			}
 
 			curr = curr == 'z' ? 'a' : curr + 1;
 		}
