@@ -160,7 +160,6 @@ int main()
 		return 1;
 	}
 
-	std::cout << "[start updating via MAP_SHARED...]\n";
 	std::thread t([] {
 		decltype(auto) strptr = map_shared(true);
 		if (strptr == nullptr)
@@ -189,8 +188,6 @@ int main()
 
 	// Allow time for first mmap() to occur.
 	std::this_thread::sleep_for(100ms);
-
-	std::cout << "[start updating via MAP_PRIVATE...]\n";
 
 	std::thread t2([] {
 		decltype(auto) strptr = map_private(true);
