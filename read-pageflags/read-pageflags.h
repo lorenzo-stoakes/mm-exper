@@ -5,6 +5,16 @@
 
 #define INVALID_VALUE (~(uint64_t)0)
 
+// Represents data retrieved from /proc/$pid/maps.
+struct map_data {
+	// VMA permissions.
+	char perms[5];
+
+	uint64_t offset;
+	uint64_t inode;
+	char name[255];
+};
+
 // Reads from /proc/self/pagemap to retrieve information on virtual mapping.
 // See https://www.kernel.org/doc/Documentation/vm/pagemap.txt for details.
 // If unable to retrieve, returns INVALID_VALUE.
@@ -26,6 +36,7 @@ bool print_flags_virt(const void *ptr, const char *descr);
 // procfs.
 bool print_flags_virt_precalc(const void *ptr, uint64_t pagemap, uint64_t pfn,
 			      uint64_t kpageflags, uint64_t mapcount,
+			      const struct map_data* mapfields,
 			      const char *descr);
 
 // Retrieves kpageflags as described at
@@ -39,3 +50,8 @@ uint64_t read_kpageflags(uint64_t pfn);
 // specified physical page at PFN `pfn`.
 // If unable to retrieve, returns INVALID_VALUE.
 uint64_t read_mapcount(uint64_t pfn);
+
+// Read data from /proc/$pid/maps and place in out. Returns true if succeeded,
+// false otherwise.
+bool read_mapdata(const void *ptr,
+		  struct map_data *out);

@@ -218,11 +218,147 @@ uint64_t read_mapcount(uint64_t pfn)
 	return read_u64("/proc/kpagecount", pfn * sizeof(uint64_t));
 }
 
+static uint64_t parse_hex(const char *str)
+{
+	uint64_t ret = 0;
+
+	for (; *str != '\0'; str++) {
+		const char chr = *str;
+
+		ret <<= 4;
+
+		if (chr >= 'a' && chr <= 'f') {
+			ret += 10 + chr - 'a';
+		} else if (chr >= 'A' && chr <= 'F') {
+			ret += 10 + chr - 'A';
+		} else if (chr >= '0' && chr <= '9') {
+			ret += chr - '0';
+		} else {
+			fprintf(stderr, "ERROR: Invalid char '%c'",
+				chr);
+			return INVALID_VALUE;
+		}
+	}
+
+	return ret;
+}
+
+static bool extract_address_range(char *str, uint64_t *from_ptr, uint64_t *to_ptr)
+{
+	uint64_t from, to;
+	char *ptr = str;
+
+	for (; *ptr != '\0'; ptr++) {
+		const char chr = *ptr;
+
+		if (chr == '-')
+			break;
+	}
+
+	if (*ptr == '\0')
+		return false;
+
+	*ptr = '\0';
+	from = parse_hex(str);
+	if (from == INVALID_VALUE)
+		return false;
+
+	to = parse_hex(ptr + 1);
+	if (to == INVALID_VALUE)
+		return false;
+
+	*from_ptr = from;
+	*to_ptr = to;
+
+	return true;
+}
+
+static bool extract_mapdata(const char *line,
+			    struct map_data *out)
+{
+	char range[255], offset[64], dev_num[64];
+	int res;
+
+	// Clear ready.
+	memset(out, 0, sizeof(struct map_data));
+
+	res = sscanf(line, "%s %s %s %s %lu %s", range, out->perms, offset,
+		     dev_num, &out->inode, out->name);
+
+	if (res < 5) {
+		fprintf(stderr, "Cannot parse /proc/self/maps line [%s]\n", line);
+		return false;
+	}
+
+	out->offset = parse_hex(offset);
+	if (out->offset == INVALID_VALUE) {
+		out->offset = 0;
+		return false;
+	}
+
+	return true;
+}
+
+bool read_mapdata(const void *ptr,
+		  struct map_data *out)
+{
+	uint64_t from, to;
+	char *line = NULL;
+	size_t len = 0;
+	FILE *fp = fopen("/proc/self/maps", "r");
+	uint64_t vaddr = (uint64_t)ptr;
+	bool ret = true;
+	bool found = false;
+
+	if (fp == NULL) {
+		fprintf(stderr, "Cannot open /proc/self/maps");
+		return false;
+	}
+
+	// Find the applicable map line.
+	while (getline(&line, &len, fp) >= 0) {
+		char buf[255];
+
+		sscanf(line, "%s", buf);
+		len = strnlen(buf, sizeof(buf));
+
+		if (!extract_address_range(buf, &from, &to)) {
+			ret = false;
+
+			goto out;
+		}
+
+		if (vaddr >= from && vaddr < to) {
+			found = true;
+			break;
+		}
+	}
+
+	if (!found) {
+		fprintf(stderr, "ERROR: Couldn't find maps data for [%p]\n", ptr);
+		ret = false;
+		goto out;
+	}
+
+	ret = extract_mapdata(line, out);
+
+out:
+	fclose(fp);
+	if (line != NULL)
+		free(line);
+
+	return ret;
+}
+
 bool print_flags_virt_precalc(const void *ptr,
 			      uint64_t pagemap, uint64_t pfn,
 			      uint64_t kpageflags, uint64_t mapcount,
+			      const struct map_data* mapfields,
 			      const char *descr)
 {
+	// TODO
+	(void)mapfields;
+
 	printf("%p: ", ptr);
 	print_pagemap_flags(pagemap);
 
@@ -267,6 +403,7 @@ bool print_flags_virt(const void *ptr, const char *descr)
 						pfn,
 						INVALID_VALUE,
 						INVALID_VALUE,
+						NULL,
 						descr);
 
 	const uint64_t kpageflags = read_kpageflags(pfn);
@@ -276,6 +413,7 @@ bool print_flags_virt(const void *ptr, const char *descr)
 						pfn,
 						INVALID_VALUE,
 						INVALID_VALUE,
+						NULL,
 						descr);
 
 	const uint64_t mapcount = read_mapcount(pfn);
@@ -285,6 +423,7 @@ bool print_flags_virt(const void *ptr, const char *descr)
 						pfn,
 						kpageflags,
 						INVALID_VALUE,
+						NULL,
 						descr);
 
 	return print_flags_virt_precalc(ptr,
@@ -292,5 +431,6 @@ bool print_flags_virt(const void *ptr, const char *descr)
 					pfn,
 					kpageflags,
 					mapcount,
+					NULL,
 					descr);
 }

@@ -6,6 +6,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -98,6 +99,8 @@ struct page_state {
 
 		kpageflags = read_kpageflags(pfn);
 		mapcount = read_mapcount(pfn);
+		if (!read_mapdata((const void*)ptr, &mapfields))
+			memset(&mapfields, 0, sizeof(map_data));
 	}
 
 	bool operator==(const page_state& that)
@@ -113,6 +116,7 @@ struct page_state {
 	uint64_t pfn;
 	uint64_t kpageflags;
 	uint64_t mapcount;
+	map_data mapfields;
 
 #ifdef MASK_FLAGS
 	// Mask out flags that simply add noise e.g. dirty page flag.
@@ -140,7 +144,7 @@ struct page_state {
 	void print(const char *descr) const
 	{
 		print_flags_virt_precalc((const void*)ptr, pagemap, pfn,
-					 kpageflags, mapcount,
+					 kpageflags, mapcount, &mapfields,
 					 descr);
 	}
 };
