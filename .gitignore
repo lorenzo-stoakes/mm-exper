@@ -1,7 +1,10 @@
+*.o
+
 section-pointers
 test-musl-malloc
-read-pageflags
+
+read-pageflags/read
+
 pagestat/example
 pagestat/pagestat
 pagestat/pagestat-watch
-*.o
