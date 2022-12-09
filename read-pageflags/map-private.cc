@@ -203,7 +203,7 @@ int main()
 
 		while (true) {
 			page_state curr(strptr);
-			if (prev != curr) {
+			if (prev.masked() != curr.masked()) {
 				curr.print("CHANGED private ptr");
 				prev = curr;
 			}
