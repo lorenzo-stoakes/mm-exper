@@ -33,11 +33,13 @@
  * memory thread which
  */
 
-namespace
-{
+using namespace std::chrono_literals;
 
 static constexpr const char* test_path="test2.txt";
+static constexpr auto delay = 100ms;
 
+namespace
+{
 volatile char* map_shared(bool populate)
 {
 	const int fd = open("test2.txt", O_RDWR);
@@ -76,6 +78,48 @@ void setup_file()
 }
 } // namespace
 
+struct page_state {
+	explicit page_state(const void *ptr)
+		: pagemap{read_pagemap(ptr)}
+		, pfn{extract_pfn(pagemap)}
+	{
+		if (pfn == INVALID_VALUE) {
+			kpageflags = 0;
+			mapcount = 0;
+			return;
+		}
+
+		kpageflags = read_kpageflags(pfn);
+		mapcount = read_mapcount(pfn);
+	}
+
+	explicit page_state(volatile char *strptr)
+		: page_state((const void *)strptr)
+	{
+	}
+
+	bool operator==(const page_state& that)
+	{
+		return pagemap == that.pagemap &&
+			pfn == that.pfn &&
+			kpageflags == that.kpageflags &&
+			mapcount == that.mapcount;
+	}
+
+	uint64_t pagemap;
+	uint64_t pfn;
+	uint64_t kpageflags;
+	uint64_t mapcount;
+
+	page_state strip_dirty_flag() const
+	{
+		page_state ret = *this;
+
+		ret.kpageflags &= ~(1UL << KPF_DIRTY);
+		return ret;
+	}
+};
+
 int main()
 {
 	setup_file();
@@ -86,10 +130,6 @@ int main()
 		return 1;
 	}
 
-	using namespace std::chrono_literals;
-
-	static const auto delay = 100ms;
-
 	std::cout << "[start updating via MAP_SHARED...]\n";
 	std::thread t([] {
 		decltype(auto) strptr = map_shared(true);
@@ -98,39 +138,21 @@ int main()
 
 		print_kpageflags_virt((char *)strptr, "shared ptr");
 
-		// We'll gamble that extract_pfn() won't return INVALID_VALUE.
-		uint64_t prev_pagemap = read_pagemap((const void *)strptr);
-		uint64_t prev_kpageflags = read_kpageflags(extract_pfn(prev_pagemap));
-		uint64_t prev_mapcount = read_mapcount(extract_pfn(prev_pagemap));
+		page_state prev(strptr);
 
-		char curr = 'a';
+		char curr_chr = 'a';
 
 		while (true) {
-			strptr[0] = curr;
+			strptr[0] = curr_chr;
 			std::this_thread::sleep_for(delay);
 
-			const uint64_t pagemap_val = read_pagemap((const void *)strptr);
-			const uint64_t pfn = extract_pfn(pagemap_val);
-			const uint64_t kpageflags_val = pfn == INVALID_VALUE ? 0 : read_kpageflags(pfn);
-			const uint64_t mapcount_val = pfn == INVALID_VALUE ? 0 : read_mapcount(pfn);
-
-			bool flags_changed = kpageflags_val != prev_kpageflags;
-			// Mask out dirty flag to stop spam.
-			if (flags_changed) {
-				const uint64_t delta = prev_kpageflags ^ kpageflags_val;
-				if (delta & (1UL << KPF_DIRTY))
-					flags_changed = false;
-			}
-
-			if (pfn == INVALID_VALUE || pagemap_val != prev_pagemap ||
-			    flags_changed || mapcount_val != prev_mapcount) {
+			page_state curr(strptr);
+			if (prev.strip_dirty_flag() != curr.strip_dirty_flag()) {
 				print_kpageflags_virt((char *)strptr, "CHANGED shared ptr");
-				prev_pagemap = pagemap_val;
-				prev_kpageflags = kpageflags_val;
-				prev_mapcount = mapcount_val;
+				prev = page_state(strptr);
 			}
 
-			curr = curr == 'z' ? 'a' : curr + 1;
+			curr_chr = curr_chr == 'z' ? 'a' : curr_chr + 1;
 		}
 	});
 
@@ -151,14 +173,13 @@ int main()
 
 		print_kpageflags_virt((char *)strptr, "1st private ptr");
 
-		std::string prev = (char *)strptr;
+		page_state prev(strptr);
 
 		while (true) {
 			// We only show if the file has changed.
-			if (prev != (char *)strptr) {
+			if (prev != page_state(strptr)) {
 				print_kpageflags_virt((char *)strptr, "private read");
-				std::cout << (char *)strptr;
-				prev = (char *)strptr;
+				prev = page_state(strptr);
 			}
 
 			std::this_thread::sleep_for(delay);
