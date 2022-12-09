@@ -212,7 +212,7 @@ int main(void)
 	ptr7[0] = 'x';
 	ptr7[4096] = 'y';
 	ptr7[2 * 1024 *1024 - 1] = 'z';
-	print_flags_virt(ptr7, "mmap anon, hugetlb, post sleep, modification");
+	print_flags_virt(ptr7, "mmap anon, hugetlb, pre sleep, modification");
 	sleep(1);
 	print_flags_virt(ptr7, "mmap anon, hugetlb, post sleep, modification");
 
