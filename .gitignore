@@ -4,6 +4,8 @@ section-pointers
 test-musl-malloc
 
 read-pageflags/read
+read-pageflags/map-private
+read-pageflags/test2.txt
 
 pagestat/example
 pagestat/pagestat
