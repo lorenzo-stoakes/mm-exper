@@ -12,7 +12,7 @@
 
 static bool check_hugetlb(void)
 {
-	static const char *path = "/sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages";
+	static const char *path = "/sys/kernel/mm/hugepages/hugepages-2048kB/free_hugepages";
 	int val = 0;
 	FILE *fp = fopen(path, "r");
 
@@ -197,8 +197,10 @@ int main(void)
 	munmap(ptr6, 4096);
 
 	// Must have set up hugetlb pages in /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
-	if (!check_hugetlb())
+	if (!check_hugetlb()) {
+		puts("[hugetlb pages not availble, skipping tests]");
 		return EXIT_SUCCESS;
+	}
 
 	char *ptr7 = mmap(NULL, 2 * 1024 * 1024, PROT_READ | PROT_WRITE,
 			  MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE | MAP_HUGETLB, -1, 0);
