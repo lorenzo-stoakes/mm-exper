@@ -297,6 +297,11 @@ static bool check_hugetlb(void)
 
 int main(void)
 {
+	if (getuid() != 0) {
+		fprintf(stderr, "ERROR: Must be run as root.\n");
+		return EXIT_FAILURE;
+	}
+
 	// First allocate a page of memory from the kernel, force _actual_
 	// allocation via MAP_POPULATE.
 	void *ptr = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
