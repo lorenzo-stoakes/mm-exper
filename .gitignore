@@ -6,6 +6,7 @@ test-musl-malloc
 read-pageflags/read
 read-pageflags/map-private
 read-pageflags/test2.txt
+read-pageflags/write-test
 
 pagestat/example
 pagestat/pagestat
