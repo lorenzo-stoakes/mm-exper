@@ -35,10 +35,17 @@
 
 // As per https://www.kernel.org/doc/Documentation/vm/pagemap.txt:
 
+// Indicates if mapping is soft-dirty.
+#define PAGEMAP_SOFT_DIRTY_BIT (55)
+// Indicates if mapping is exclusively mapped.
+#define PAGEMAP_EXCLUSIVELY_MAPPED_BIT (56)
+// Indicates file-page or shared-anon.
+#define PAGEMAP_FILE_PAGE_SH_ANON_BIT (61)
 // Indicates page swapped out.
 #define PAGEMAP_SWAPPED_BIT (62)
 // Indicates page is present.
 #define PAGEMAP_PRESENT_BIT (63)
+
 // 'Bits 0-54  page frame number (PFN) if present'
 #define PAGEMAP_PFN_NUM_BITS (55)
 #define PAGEMAP_PFN_MASK BIT_MASK_LOWER(PAGEMAP_PFN_NUM_BITS)
@@ -98,9 +105,8 @@ static uint64_t read_pagemap(const void *ptr)
 // Invokes read_pagemap() and decodes physical Page Frame Number (PFN) from the
 // obtained value.
 // If unable to retrieve, returns INVALID_VALUE.
-static uint64_t get_pfn(const void *ptr)
+static uint64_t get_pfn(const void *ptr, uint64_t val)
 {
-	uint64_t val = read_pagemap(ptr);
 	if (val == INVALID_VALUE)
 		return INVALID_VALUE;
 
@@ -218,11 +224,28 @@ static int get_refcount(uint64_t pfn)
 	return ret;
 }
 
+// Prints pagemap flags.
+static void print_pagemap_flags(uint64_t val)
+{
+	printf("[%s%s%s%s%s] ",
+	       CHECK_BIT(val, PAGEMAP_SOFT_DIRTY_BIT) ? "s" : " ",
+	       CHECK_BIT(val, PAGEMAP_EXCLUSIVELY_MAPPED_BIT) ? "x" : " ",
+	       CHECK_BIT(val, PAGEMAP_FILE_PAGE_SH_ANON_BIT) ? "f" : " ",
+	       CHECK_BIT(val, PAGEMAP_SWAPPED_BIT) ? "S" : " ",
+	       CHECK_BIT(val, PAGEMAP_PRESENT_BIT) ? "p" : " ");
+}
+
 // Print kpageflags for the page containing the specified pointer.
 // Return value indicates whether succeeded.
 static bool print_kpageflags_virt(const void *ptr, const char *descr)
 {
-	const uint64_t pfn = get_pfn(ptr);
+	const uint64_t pagemap_val = read_pagemap(ptr);
+
+	printf("%p: ", ptr);
+
+	print_pagemap_flags(pagemap_val);
+
+	const uint64_t pfn = get_pfn(ptr, pagemap_val);
 	if (pfn == INVALID_VALUE) {
 		return false;
 	} else if (pfn == 0) {
@@ -241,7 +264,6 @@ static bool print_kpageflags_virt(const void *ptr, const char *descr)
 		return false;
 	}
 
-	printf("%p: ", ptr);
 	printf("pfn=%lu: ", pfn);
 
 	const int refcount = get_refcount(pfn);
