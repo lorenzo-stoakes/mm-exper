@@ -40,6 +40,11 @@ static constexpr auto delay = 100ms;
 
 namespace
 {
+// While 'volatile' is often misused we explicitly use it here to indicate to
+// the compiler not to get 'smart' and try to elide code but rather to take into
+// account that what is mapped might get updated by the OS (the very thing we
+// are investigating).
+
 volatile char* map_shared(bool populate)
 {
 	const int fd = open("test2.txt", O_RDWR);
@@ -171,11 +176,6 @@ int main()
 	std::cout << "[start updating via MAP_PRIVATE...]\n";
 
 	std::thread t2([] {
-		// While 'volatile' is often misused we explicitly use it here
-		// to indicate to the compiler not to get 'smart' and try to
-		// elide code but rather to take into account that what is
-		// mapped might get updated by the OS (the very thing we are
-		// investigating).
 		decltype(auto) strptr = map_private(true);
 		if (strptr == nullptr)
 			throw std::runtime_error("can't map private");
