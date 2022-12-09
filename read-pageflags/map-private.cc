@@ -139,9 +139,9 @@ struct page_state {
 
 	void print(const char *descr) const
 	{
-		print_kpageflags_virt_precalc((const void*)ptr, pagemap, pfn,
-					      kpageflags, mapcount,
-					      descr);
+		print_flags_virt_precalc((const void*)ptr, pagemap, pfn,
+					 kpageflags, mapcount,
+					 descr);
 	}
 };
 
@@ -160,7 +160,7 @@ int main()
 		if (strptr == nullptr)
 			throw std::runtime_error("can't map shared");
 
-		print_kpageflags_virt((char *)strptr, "FIRST shared ptr");
+		print_flags_virt((char *)strptr, "FIRST shared ptr");
 
 		page_state prev(strptr);
 
@@ -189,7 +189,7 @@ int main()
 		if (strptr == nullptr)
 			throw std::runtime_error("can't map private");
 
-		print_kpageflags_virt((char *)strptr, "FIRST private ptr");
+		print_flags_virt((char *)strptr, "FIRST private ptr");
 
 		page_state prev(strptr);
 

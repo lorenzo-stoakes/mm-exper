@@ -43,24 +43,24 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	if (!print_kpageflags_virt(ptr, "initial mmap"))
+	if (!print_flags_virt(ptr, "initial mmap"))
 		return EXIT_FAILURE;
 
 	// Do something with the page.
 	memset(ptr, 123, 4096);
 
-	if (!print_kpageflags_virt(ptr, "modified page"))
+	if (!print_flags_virt(ptr, "modified page"))
 		return EXIT_FAILURE;
 
 	munmap(ptr, 4096);
 
 	void *ptr2 = malloc(4096);
-	if (!print_kpageflags_virt(ptr2, "initial malloc"))
+	if (!print_flags_virt(ptr2, "initial malloc"))
 		return EXIT_FAILURE;
 
 	memset(ptr2, 123, 4096);
 
-	if (!print_kpageflags_virt(ptr2, "modified malloc"))
+	if (!print_flags_virt(ptr2, "modified malloc"))
 		return EXIT_FAILURE;
 
 	int fd = open("test.txt", O_RDWR);
@@ -79,17 +79,17 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	if (!print_kpageflags_virt(ptr3, "mmap file"))
+	if (!print_flags_virt(ptr3, "mmap file"))
 		return EXIT_FAILURE;
 
 	ptr3[0] = 'Z';
 
-	if (!print_kpageflags_virt(ptr3, "mmap modified file"))
+	if (!print_flags_virt(ptr3, "mmap modified file"))
 		return EXIT_FAILURE;
 
 	madvise(ptr3, 4096, MADV_COLD);
 
-	if (!print_kpageflags_virt(ptr3, "mmap modified, cold file"))
+	if (!print_flags_virt(ptr3, "mmap modified, cold file"))
 		return EXIT_FAILURE;
 
 	munmap(ptr3, 4096);
@@ -103,7 +103,7 @@ int main(void)
 
 	ptr4[0] = 'x';
 
-	print_kpageflags_virt(ptr4, "mmap anon, pre-fork");
+	print_flags_virt(ptr4, "mmap anon, pre-fork");
 
 	fd = open("test.txt", O_RDWR);
 	if (fd == -1) {
@@ -126,33 +126,33 @@ int main(void)
 
 	close(fd);
 
-	print_kpageflags_virt(ptr4b, "mmap private file, pre-fork");
+	print_flags_virt(ptr4b, "mmap private file, pre-fork");
 
 	pid_t p = fork();
 	if (p == 0) {
-		print_kpageflags_virt(ptr4, "mmap anon, forked");
+		print_flags_virt(ptr4, "mmap anon, forked");
 
 		ptr4[0] = 'y';
-		print_kpageflags_virt(ptr4, "mmap anon, forked, modified (pre-sleep)");
+		print_flags_virt(ptr4, "mmap anon, forked, modified (pre-sleep)");
 
 		sleep(1);
-		print_kpageflags_virt(ptr4, "mmap anon, forked, modified (after sleep)");
+		print_flags_virt(ptr4, "mmap anon, forked, modified (after sleep)");
 
-		print_kpageflags_virt(ptr4b, "mmap private file, post-fork");
+		print_flags_virt(ptr4b, "mmap private file, post-fork");
 		ptr4b[3] = 'x';
-		print_kpageflags_virt(ptr4b, "mmap private file, post-fork (modify)");
+		print_flags_virt(ptr4b, "mmap private file, post-fork (modify)");
 
 		if (ptr4[0] == 'y')
 			ptr4[0] = 'x';
 
 		ptr4c[3] = 'x'; // Trigger CoW
-		print_kpageflags_virt(ptr4c, "mmap private file, post-fork, not populated, CoW (modify)");
+		print_flags_virt(ptr4c, "mmap private file, post-fork, not populated, CoW (modify)");
 
 		sleep(1);
 
-		print_kpageflags_virt(ptr4, "mmap anon, forked, modified (after sleep, modify)");
+		print_flags_virt(ptr4, "mmap anon, forked, modified (after sleep, modify)");
 
-		print_kpageflags_virt(ptr4b, "mmap private file, post-fork (after sleep, modify)");
+		print_flags_virt(ptr4b, "mmap private file, post-fork (after sleep, modify)");
 
 		return EXIT_SUCCESS;
 	}
@@ -172,8 +172,8 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	print_kpageflags_virt(ptr5, "mmap file page 1, all bytes");
-	print_kpageflags_virt(ptr5 + 4096, "mmap file page 2, all bytes");
+	print_flags_virt(ptr5, "mmap file page 1, all bytes");
+	print_flags_virt(ptr5 + 4096, "mmap file page 2, all bytes");
 
 	char *ptr6 = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
 			  MAP_SHARED | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
@@ -181,18 +181,18 @@ int main(void)
 		perror("mmap (6)");
 		return EXIT_FAILURE;
 	}
-	print_kpageflags_virt(ptr6, "mmap anon, shared");
+	print_flags_virt(ptr6, "mmap anon, shared");
 
 	pid_t p2 = fork();
 	if (p2 == 0) {
 		ptr6[0] = 'x';
 
-		print_kpageflags_virt(ptr6, "mmap anon, shared, post fork");
+		print_flags_virt(ptr6, "mmap anon, shared, post fork");
 
 		return EXIT_SUCCESS;
 	}
 	wait(NULL);
-	print_kpageflags_virt(ptr6, "mmap anon, shared, post fork done");
+	print_flags_virt(ptr6, "mmap anon, shared, post fork done");
 
 	munmap(ptr6, 4096);
 
@@ -206,12 +206,12 @@ int main(void)
 		perror("mmap (7)");
 		return EXIT_FAILURE;
 	}
-	print_kpageflags_virt(ptr7, "mmap anon, hugetlb");
+	print_flags_virt(ptr7, "mmap anon, hugetlb");
 	ptr7[0] = 'x';
 	ptr7[4096] = 'y';
 	ptr7[2 * 1024 *1024 - 1] = 'z';
-	print_kpageflags_virt(ptr7, "mmap anon, hugetlb, post sleep, modification");
+	print_flags_virt(ptr7, "mmap anon, hugetlb, post sleep, modification");
 	sleep(1);
-	print_kpageflags_virt(ptr7, "mmap anon, hugetlb, post sleep, modification");
+	print_flags_virt(ptr7, "mmap anon, hugetlb, post sleep, modification");
 	return EXIT_SUCCESS;
 }

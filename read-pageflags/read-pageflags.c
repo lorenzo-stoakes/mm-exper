@@ -218,10 +218,10 @@ uint64_t read_mapcount(uint64_t pfn)
 	return read_u64("/proc/kpagecount", pfn * sizeof(uint64_t));
 }
 
-bool print_kpageflags_virt_precalc(const void *ptr,
-				   uint64_t pagemap, uint64_t pfn,
-				   uint64_t kpageflags, uint64_t mapcount,
-				   const char *descr)
+bool print_flags_virt_precalc(const void *ptr,
+			      uint64_t pagemap, uint64_t pfn,
+			      uint64_t kpageflags, uint64_t mapcount,
+			      const char *descr)
 {
 	printf("%p: ", ptr);
 	print_pagemap_flags(pagemap);
@@ -257,40 +257,40 @@ bool print_kpageflags_virt_precalc(const void *ptr,
 	return true;
 }
 
-bool print_kpageflags_virt(const void *ptr, const char *descr)
+bool print_flags_virt(const void *ptr, const char *descr)
 {
 	const uint64_t pagemap = read_pagemap(ptr);
 	const uint64_t pfn = extract_pfn(pagemap);
 	if (pfn == INVALID_VALUE || 0)
-		return print_kpageflags_virt_precalc(ptr,
-						     pagemap,
-						     pfn,
-						     INVALID_VALUE,
-						     INVALID_VALUE,
-						     descr);
+		return print_flags_virt_precalc(ptr,
+						pagemap,
+						pfn,
+						INVALID_VALUE,
+						INVALID_VALUE,
+						descr);
 
 	const uint64_t kpageflags = read_kpageflags(pfn);
 	if (kpageflags == INVALID_VALUE)
-		return print_kpageflags_virt_precalc(ptr,
-						     pagemap,
-						     pfn,
-						     INVALID_VALUE,
-						     INVALID_VALUE,
-						     descr);
+		return print_flags_virt_precalc(ptr,
+						pagemap,
+						pfn,
+						INVALID_VALUE,
+						INVALID_VALUE,
+						descr);
 
 	const uint64_t mapcount = read_mapcount(pfn);
 	if (mapcount == INVALID_VALUE)
-		return print_kpageflags_virt_precalc(ptr,
-						     pagemap,
-						     pfn,
-						     kpageflags,
-						     INVALID_VALUE,
-						     descr);
+		return print_flags_virt_precalc(ptr,
+						pagemap,
+						pfn,
+						kpageflags,
+						INVALID_VALUE,
+						descr);
 
-	return print_kpageflags_virt_precalc(ptr,
-					     pagemap,
-					     pfn,
-					     kpageflags,
-					     mapcount,
-					     descr);
+	return print_flags_virt_precalc(ptr,
+					pagemap,
+					pfn,
+					kpageflags,
+					mapcount,
+					descr);
 }
