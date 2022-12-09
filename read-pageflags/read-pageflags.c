@@ -91,15 +91,11 @@ uint64_t extract_pfn(uint64_t val)
 	if (val == INVALID_VALUE)
 		return INVALID_VALUE;
 
-	if (CHECK_BIT(val, PAGEMAP_SWAPPED_BIT)) {
-		fprintf(stderr, "physical page swapped out!\n");
+	if (CHECK_BIT(val, PAGEMAP_SWAPPED_BIT))
 		return INVALID_VALUE;
-	}
 
-	if (!CHECK_BIT(val, PAGEMAP_PRESENT_BIT)) {
-		fprintf(stderr, "physical page not present\n");
+	if (!CHECK_BIT(val, PAGEMAP_PRESENT_BIT))
 		return INVALID_VALUE;
-	}
 
 	return val & PAGEMAP_PFN_MASK;
 }
@@ -232,21 +228,21 @@ bool print_kpageflags_virt(const void *ptr, const char *descr)
 
 	const uint64_t pfn = extract_pfn(pagemap_val);
 	if (pfn == INVALID_VALUE) {
-		printf("(invalid value)");
+		printf("(not present) [%s]\n", descr);
 		return false;
 	} else if (pfn == 0) {
-		printf("(cannot retrieve PFN)\n");
+		printf("(cannot retrieve PFN) [%s]\n", descr);
 		return false;
 	}
 
 	const uint64_t kpf = read_kpageflags(pfn);
 	if (kpf == INVALID_VALUE) {
-		printf("(cannot retrieve kpageflags)\n");
+		printf("(cannot retrieve kpageflags) [%s]\n", descr);
 		return false;
 	}
 	const uint64_t mapcount = read_mapcount(pfn);
 	if (mapcount == INVALID_VALUE) {
-		printf("(cannot retrieve kpagecount)\n");
+		printf("(cannot retrieve kpagecount) [%s]\n", descr);
 		return false;
 	}
 
