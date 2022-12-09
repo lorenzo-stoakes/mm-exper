@@ -35,7 +35,8 @@
 
 using namespace std::chrono_literals;
 
-static constexpr const char* test_path="test2.txt";
+#define MASK_FLAGS
+static constexpr const char* test_path = "test2.txt";
 static constexpr auto delay = 100ms;
 
 namespace
@@ -118,13 +119,28 @@ struct page_state {
 	uint64_t kpageflags;
 	uint64_t mapcount;
 
-	page_state strip_dirty_flag() const
+#ifdef MASK_FLAGS
+	// Mask out flags that simply add noise e.g. dirty page flag.
+	page_state masked() const
 	{
+		if (kpageflags == INVALID_VALUE)
+			return *this;
+
 		page_state ret = *this;
 
 		ret.kpageflags &= ~(1UL << KPF_DIRTY);
+		ret.kpageflags &= ~(1UL << KPF_ACTIVE);
+		ret.kpageflags &= ~(1UL << KPF_REFERENCED);
+		ret.kpageflags &= ~(1UL << KPF_WRITEBACK);
+
 		return ret;
 	}
+#else
+	page_state masked() const
+	{
+		return *this;
+	}
+#endif
 
 	void print(const char *descr) const
 	{
@@ -161,7 +177,8 @@ int main()
 			std::this_thread::sleep_for(delay);
 
 			page_state curr(strptr);
-			if (prev.strip_dirty_flag() != curr.strip_dirty_flag()) {
+			// We mask out some common flag changes to reduce noise.
+			if (prev.masked() != curr.masked()) {
 				curr.print("CHANGED shared ptr");
 				prev = curr;
 			}
