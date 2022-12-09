@@ -22,6 +22,12 @@ uint64_t extract_pfn(uint64_t val);
 // Return value indicates whether succeeded.
 bool print_kpageflags_virt(const void *ptr, const char *descr);
 
+// Same as print_kpageflags_virt(), only we have already obtained values from
+// procfs.
+bool print_kpageflags_virt_precalc(const void *ptr, uint64_t pagemap, uint64_t pfn,
+				   uint64_t kpageflags, uint64_t mapcount,
+				   const char *descr);
+
 // Retrieves kpageflags as described at
 // https://www.kernel.org/doc/html/latest/admin-guide/mm/pagemap.html for the
 // specified physical page at PFN `pfn`.
