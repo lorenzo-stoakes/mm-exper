@@ -243,20 +243,21 @@ bool print_kpageflags_virt(const void *ptr, const char *descr)
 
 	const uint64_t pfn = get_pfn(ptr, pagemap_val);
 	if (pfn == INVALID_VALUE) {
+		printf("(invalid value)");
 		return false;
 	} else if (pfn == 0) {
-		fprintf(stderr, "Cannot retrieve PFN\n");
+		printf("(cannot retrieve PFN)\n");
 		return false;
 	}
 
 	const uint64_t kpf = get_kpageflags(pfn);
 	if (kpf == INVALID_VALUE) {
-		fprintf(stderr, "Cannot retrieve kpageflags\n");
+		printf("(cannot retrieve kpageflags)\n");
 		return false;
 	}
 	const uint64_t mapcount = get_mapcount(pfn);
 	if (mapcount == INVALID_VALUE) {
-		fprintf(stderr, "Cannot retrieve kpagecount\n");
+		printf("(cannot retrieve kpagecount)\n");
 		return false;
 	}
 
