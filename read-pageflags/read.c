@@ -213,5 +213,6 @@ int main(void)
 	print_flags_virt(ptr7, "mmap anon, hugetlb, post sleep, modification");
 	sleep(1);
 	print_flags_virt(ptr7, "mmap anon, hugetlb, post sleep, modification");
+
 	return EXIT_SUCCESS;
 }
