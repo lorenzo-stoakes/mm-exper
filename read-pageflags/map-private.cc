@@ -83,6 +83,14 @@ void setup_file()
 
 	fs::permissions(test_path, fs::perms::all);
 }
+
+char next_char(char chr)
+{
+	if (chr < 'a' || chr > 'z')
+		return 'a';
+
+	return chr == 'z' ? 'a' : chr + 1;
+}
 } // namespace
 
 struct page_state {
@@ -168,10 +176,14 @@ int main()
 		print_flags_virt((char *)strptr, "FIRST shared ptr");
 
 		page_state prev(strptr);
+		std::string prev_str = (char *)strptr;
 
 		char curr_chr = 'a';
 
 		while (true) {
+			if (prev_str != (char *)strptr)
+				std::cout << "ODD: Shared map changed??\n";
+
 			strptr[0] = curr_chr;
 			std::this_thread::sleep_for(delay);
 
@@ -182,7 +194,8 @@ int main()
 				prev = curr;
 			}
 
-			curr_chr = curr_chr == 'z' ? 'a' : curr_chr + 1;
+			curr_chr = next_char(curr_chr);
+			prev_str = (char *)strptr;
 		}
 	});
 
@@ -198,6 +211,8 @@ int main()
 
 		page_state prev(strptr);
 
+		int count = 0;
+
 		while (true) {
 			page_state curr(strptr);
 			if (prev.masked() != curr.masked()) {
@@ -208,6 +223,17 @@ int main()
 			(volatile void)strptr[0];
 
 			std::this_thread::sleep_for(delay);
+
+			count++;
+			// Write every 10 * interval (5s by default).
+			if (count % 10 == 0) {
+				// Should contain newline.
+				std::cout << "write, was " << (char *)strptr;
+				// Just in case it doesn't...
+				std::cout.flush();
+				const char chr = strptr[1];
+				strptr[1] = next_char(chr);
+			}
 		}
 	});
 
