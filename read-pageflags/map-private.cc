@@ -56,7 +56,7 @@ volatile char* map_shared(bool populate)
 
 	void *ret = mmap(nullptr, 4096, PROT_READ | PROT_WRITE,
 			 MAP_SHARED | (populate ? MAP_POPULATE : 0), fd, 0);
-	::close(fd);
+	close(fd);
 
 	return ret == MAP_FAILED ? nullptr : (volatile char*)ret;
 }
