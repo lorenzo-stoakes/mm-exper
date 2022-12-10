@@ -15,14 +15,19 @@
 
 #include "read-pageflags.h"
 
-// If set, we MAP_POPULATE the private mapping.
+// Set to MAP_POPULATE the private mapping.
 //#define POPULATE_PRIVATE
 
 // Set to periodically write to private mapping.
 #define WRITE_PRIVATE_MAPPING
 
-// Set to observe changes to MAP_PRIVATE buffer
+// Set to observe changes to private mapping buffer.
 //#define SHOW_PRIVATE_CHANGES
+
+// Set to mask uninteresting folio flags for monitoring purposes, e.g. we
+// probably don't care for the purposes of this investigation whether a folio
+// moves from the inactive to the active list or vice-versa.
+#define MASK_FLAGS
 
 /*
  * -- MAP_PRIVATE experiment --
@@ -45,7 +50,6 @@
 
 using namespace std::chrono_literals;
 
-#define MASK_FLAGS
 static constexpr const char* test_path = "test2.txt";
 static constexpr auto delay = 500ms;
 
