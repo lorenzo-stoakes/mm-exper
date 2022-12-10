@@ -29,6 +29,9 @@
 // moves from the inactive to the active list or vice-versa.
 #define MASK_FLAGS
 
+// Set to explicitly read from the private buffer to fault in.
+#define READ_FAULT_PRIVATE
+
 /*
  * -- MAP_PRIVATE experiment --
  *
@@ -239,8 +242,10 @@ int main()
 		while (true) {
 			page_state pre_read_fault(strptr);
 
+#ifdef READ_FAULT_PRIVATE
 			// We may need to fault the page back in, so access it.
 			(volatile void)strptr[0];
+#endif
 
 			page_state curr(strptr);
 
@@ -251,8 +256,10 @@ int main()
 					std::cout << "PRIVATE write\n";
 #endif
 
+#ifdef READ_FAULT_PRIVATE
 				if (pre_read_fault.masked() != curr.masked())
 					std::cout << "PRIVATE read\n";
+#endif
 
 				curr.print("PRIVATE changed ptr");
 				prev = curr;
