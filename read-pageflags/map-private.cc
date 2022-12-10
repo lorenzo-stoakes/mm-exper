@@ -21,6 +21,9 @@
 // Set to periodically write to private mapping.
 #define WRITE_PRIVATE_MAPPING
 
+// Set to observe changes to MAP_PRIVATE buffer
+//#define SHOW_PRIVATE_CHANGES
+
 /*
  * -- MAP_PRIVATE experiment --
  *
@@ -225,6 +228,10 @@ int main()
 
 		int count = 0;
 
+#ifdef SHOW_PRIVATE_CHANGES
+		std::string prev_buf;
+#endif
+
 		while (true) {
 			page_state pre_read_fault(strptr);
 
@@ -247,6 +254,14 @@ int main()
 				prev = curr;
 			}
 
+#ifdef SHOW_PRIVATE_CHANGES
+			if (prev_buf != (char *)strptr) {
+				std::cout << "Buffer changed: " << (char *)strptr;
+				std::cout.flush(); // buffer should have newline, flush in case not.
+				prev_buf = (char *)strptr;
+			}
+#endif
+
 			std::this_thread::sleep_for(delay);
 
 			count++;
@@ -254,7 +269,12 @@ int main()
 			// Write every 10 * interval (5s by default).
 			if (count % 10 == 0) {
 				const char chr = strptr[1];
-				strptr[1] = next_char(chr);
+				const char next = next_char(chr);
+
+				strptr[1] = next;
+#ifdef SHOW_PRIVATE_CHANGES
+				prev_buf[1] = next;
+#endif
 			}
 #endif
 		}
