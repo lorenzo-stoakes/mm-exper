@@ -226,23 +226,26 @@ int main()
 		int count = 0;
 
 		while (true) {
+			page_state pre_read_fault(strptr);
+
+			// We may need to fault the page back in, so access it.
+			(volatile void)strptr[0];
+
 			page_state curr(strptr);
+
 			if (prev.masked() != curr.masked()) {
 #ifdef WRITE_PRIVATE_MAPPING
 				// Output what was written given we triggered a change.
-				if (count % 10 == 0) {
-					// Should contain newline.
-					std::cout << "PRIVATE write, was " << (char *)strptr;
-					// Just in case it doesn't...
-					std::cout.flush();
-				}
+				if (count != 0 && count % 10 == 0)
+					std::cout << "PRIVATE write\n";
 #endif
+
+				if (pre_read_fault.masked() != curr.masked())
+					std::cout << "PRIVATE read\n";
 
 				curr.print("PRIVATE changed ptr");
 				prev = curr;
 			}
-			// We may need to fault the page back in, so access it.
-			(volatile void)strptr[0];
 
 			std::this_thread::sleep_for(delay);
 
