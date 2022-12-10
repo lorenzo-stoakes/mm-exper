@@ -219,13 +219,16 @@ int main()
 	std::this_thread::sleep_for(100ms);
 
 	std::thread t2([] {
-		decltype(auto) strptr = map_private(
+		const bool populate =
 #ifdef POPULATE_PRIVATE
 			true
 #else
 			false
 #endif
-			);
+			;
+
+		decltype(auto) strptr = map_private(populate);
+
 		if (strptr == nullptr)
 			throw std::runtime_error("can't map private");
 
@@ -279,12 +282,20 @@ int main()
 #ifdef WRITE_PRIVATE_MAPPING
 			// Write every 10 * interval (5s by default).
 			if (count % 10 == 0) {
+// We only want to be reading if we have already read-faulted in.
+#ifdef READ_FAULT_PRIVATE
 				const char chr = strptr[1];
 				const char next = next_char(chr);
 
 				strptr[1] = next;
 #ifdef SHOW_PRIVATE_CHANGES
 				prev_buf[1] = next;
+#endif
+#else
+				strptr[1] = 'y';
+#ifdef SHOW_PRIVATE_CHANGES
+				prev_buf[1] = 'y';
+#endif
 #endif
 			}
 #endif
