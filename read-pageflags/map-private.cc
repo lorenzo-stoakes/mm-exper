@@ -15,8 +15,11 @@
 
 #include "read-pageflags.h"
 
+// If set, we MAP_POPULATE the private mapping.
+//#define POPULATE_PRIVATE
+
 // Set to periodically write to private mapping.
-//#define WRITE_PRIVATE_MAPPING
+#define WRITE_PRIVATE_MAPPING
 
 /*
  * -- MAP_PRIVATE experiment --
@@ -176,7 +179,7 @@ int main()
 		if (strptr == nullptr)
 			throw std::runtime_error("can't map shared");
 
-		print_flags_virt((char *)strptr, "FIRST shared ptr");
+		print_flags_virt((char *)strptr, "SHARED first ptr");
 
 		page_state prev(strptr);
 
@@ -190,7 +193,7 @@ int main()
 			page_state curr(strptr);
 			// We mask out some common flag changes to reduce noise.
 			if (prev.masked() != curr.masked()) {
-				curr.print("CHANGED shared ptr");
+				curr.print("SHARED changed ptr");
 				prev = curr;
 			}
 
@@ -206,11 +209,17 @@ int main()
 	std::this_thread::sleep_for(100ms);
 
 	std::thread t2([] {
-		decltype(auto) strptr = map_private(true);
+		decltype(auto) strptr = map_private(
+#ifdef POPULATE_PRIVATE
+			true
+#else
+			false
+#endif
+			);
 		if (strptr == nullptr)
 			throw std::runtime_error("can't map private");
 
-		print_flags_virt((char *)strptr, "FIRST private ptr");
+		print_flags_virt((char *)strptr, "PRIVATE first ptr");
 
 		page_state prev(strptr);
 
@@ -219,7 +228,17 @@ int main()
 		while (true) {
 			page_state curr(strptr);
 			if (prev.masked() != curr.masked()) {
-				curr.print("CHANGED private ptr");
+#ifdef WRITE_PRIVATE_MAPPING
+				// Output what was written given we triggered a change.
+				if (count % 10 == 0) {
+					// Should contain newline.
+					std::cout << "PRIVATE write, was " << (char *)strptr;
+					// Just in case it doesn't...
+					std::cout.flush();
+				}
+#endif
+
+				curr.print("PRIVATE changed ptr");
 				prev = curr;
 			}
 			// We may need to fault the page back in, so access it.
@@ -231,10 +250,6 @@ int main()
 #ifdef WRITE_PRIVATE_MAPPING
 			// Write every 10 * interval (5s by default).
 			if (count % 10 == 0) {
-				// Should contain newline.
-				std::cout << "PRIVATE write, was " << (char *)strptr;
-				// Just in case it doesn't...
-				std::cout.flush();
 				const char chr = strptr[1];
 				strptr[1] = next_char(chr);
 			}
