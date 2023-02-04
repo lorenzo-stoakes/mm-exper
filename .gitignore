@@ -11,3 +11,6 @@ read-pageflags/write-test
 pagestat/example
 pagestat/pagestat
 pagestat/pagestat-watch
+
+kernel/*.ko
+kernel/*.dwo
