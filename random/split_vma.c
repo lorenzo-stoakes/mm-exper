@@ -20,7 +20,7 @@ static void ensure_space(void)
 	}
 
 	void *after = mmap(TARGET_PTR + NUM_PAGES * page_size, page_size, PROT_READ | PROT_WRITE,
-			    MAP_ANON | MAP_PRIVATE | MAP_FIXED, -1, 0);
+			   MAP_ANON | MAP_PRIVATE | MAP_FIXED, -1, 0);
 
 	if (munmap(before, page_size) != 0) {
 		perror("ensure_space() munmap()");
