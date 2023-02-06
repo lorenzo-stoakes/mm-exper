@@ -21,6 +21,10 @@ static void ensure_space(void)
 
 	void *after = mmap(TARGET_PTR + NUM_PAGES * page_size, page_size, PROT_READ | PROT_WRITE,
 			   MAP_ANON | MAP_PRIVATE | MAP_FIXED, -1, 0);
+	if (after == MAP_FAILED) {
+		perror("ensure_space() [after] mmap()");
+		exit(EXIT_FAILURE);
+	}
 
 	if (munmap(before, page_size) != 0) {
 		perror("ensure_space() munmap()");
@@ -47,7 +51,7 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	printf("ptr = %p\n", ptr);
+	printf("ptr = %p [press enter to continue...]\n", ptr);
 	getchar();
 
 	// Now free a page in the middle, which should split the
@@ -58,7 +62,7 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	puts("split done");
+	puts("split done [press enter to continue...]");
 	getchar();
 
 	void *join = mmap(ptr + (NUM_PAGES / 2) * page_size, page_size, PROT_READ | PROT_WRITE,
