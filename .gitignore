@@ -16,3 +16,4 @@ kernel/*.ko
 kernel/*.dwo
 
 random/split_vma
+random/merge_split
