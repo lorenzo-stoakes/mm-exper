@@ -56,7 +56,8 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	void *ptr2 = mmap(TARGET_PTR + half * page_size, half * page_size, PROT_READ | PROT_WRITE,
+	void *ptr2 = mmap(TARGET_PTR + (half + 1) * page_size, (half  - 1) * page_size,
+			  PROT_READ | PROT_WRITE,
 			  MAP_ANON | MAP_PRIVATE | MAP_POPULATE | MAP_FIXED, -1, 0);
 	if (ptr2 == MAP_FAILED) {
 		perror("mmap ptr2");
@@ -68,7 +69,7 @@ int main(void)
 
 	// Now map a page in the middle, which should merge the VMA.
 	// MAP_POPULATE means folios are already populated.
-	void *ptr3 = mmap(TARGET_PTR + (half - 1) * page_size, page_size, PROT_READ | PROT_WRITE,
+	void *ptr3 = mmap(TARGET_PTR + half * page_size, page_size, PROT_READ | PROT_WRITE,
 			  MAP_ANON | MAP_PRIVATE | MAP_POPULATE | MAP_FIXED, -1, 0);
 	if (ptr3 == MAP_FAILED) {
 		perror("mmap ptr3");
