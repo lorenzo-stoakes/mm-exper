@@ -27,12 +27,12 @@ static void ensure_space(void)
 	}
 
 	if (munmap(before, page_size) != 0) {
-		perror("ensure_space() munmap()");
+		perror("ensure_space() [before] munmap()");
 		exit(EXIT_FAILURE);
 	}
 
 	if (munmap(after, page_size) != 0) {
-		perror("ensure_space() munmap()");
+		perror("ensure_space() [after] munmap()");
 		exit(EXIT_FAILURE);
 	}
 }
