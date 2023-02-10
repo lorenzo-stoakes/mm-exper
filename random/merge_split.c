@@ -48,14 +48,16 @@ int main(void)
 
 	const unsigned long half = NUM_PAGES / 2;
 
-	// First block is 49 pages.
-	void *ptr1 = mmap(TARGET_PTR, (half - 1) * page_size, PROT_READ | PROT_WRITE,
+	// First block is 50 pages.
+	void *ptr1 = mmap(TARGET_PTR, half * page_size,
+			  PROT_READ | PROT_WRITE,
 			  MAP_ANON | MAP_PRIVATE | MAP_POPULATE | MAP_FIXED, -1, 0);
 	if (ptr1 == MAP_FAILED) {
 		perror("mmap ptr1");
 		return EXIT_FAILURE;
 	}
 
+	// First block is 49 pages.
 	void *ptr2 = mmap(TARGET_PTR + (half + 1) * page_size, (half  - 1) * page_size,
 			  PROT_READ | PROT_WRITE,
 			  MAP_ANON | MAP_PRIVATE | MAP_POPULATE | MAP_FIXED, -1, 0);
@@ -69,12 +71,14 @@ int main(void)
 
 	// Now map a page in the middle, which should merge the VMA.
 	// MAP_POPULATE means folios are already populated.
-	void *ptr3 = mmap(TARGET_PTR + half * page_size, page_size, PROT_READ | PROT_WRITE,
+	void *ptr3 = mmap(TARGET_PTR + half * page_size, page_size,
+			  PROT_READ | PROT_WRITE,
 			  MAP_ANON | MAP_PRIVATE | MAP_POPULATE | MAP_FIXED, -1, 0);
 	if (ptr3 == MAP_FAILED) {
 		perror("mmap ptr3");
 		return EXIT_FAILURE;
 	}
+	printf("ptr1=%p, ptr2=%p, ptr3=%p\n", ptr1, ptr2, ptr3);
 
 	puts("merge done [press enter to continue...]");
 	getchar();
