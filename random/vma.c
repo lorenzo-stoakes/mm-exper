@@ -19,7 +19,19 @@ int main(void)
 
 	// We intentionally leak mappings all over the shop.
 
+	puts("MAP_ANON | MAP_PRIVATE, PROT_NONE");
+
 	ptr = mmap(NULL, page_size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
+	if (ptr == MAP_FAILED) {
+		perror("mmap 1");
+		return EXIT_FAILURE;
+	}
+
+	trigger_breakpoint(ptr);
+
+	puts("MAP_ANON | MAP_PRIVATE, PROT_READ");
+
+	ptr = mmap(NULL, page_size, PROT_READ, MAP_ANON | MAP_PRIVATE, -1, 0);
 	if (ptr == MAP_FAILED) {
 		perror("mmap 1");
 		return EXIT_FAILURE;
