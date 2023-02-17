@@ -1,25 +1,25 @@
 #include "shared.h"
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
-#define USE_VMAFLAGS
-
 static void examine_vma(void *ptr)
 {
-#ifdef USE_VMAFLAGS
+	if (ptr == MAP_FAILED) {
+		puts("(invalid mapping!)");
+		return;
+	}
+
 	lookup_vma_flags(ptr);
-#else
 	const long page_size = sysconf(_SC_PAGESIZE);
 
 	// Now madvise MADV_NORMAL to make it easy to put a breakpoint in gdb
 	// (at madvise_walk_vmas()).
 	madvise(ptr, page_size, MADV_NORMAL);
-#endif
 }
-
 
 int main(void)
 {
@@ -28,7 +28,7 @@ int main(void)
 
 	// We intentionally leak mappings all over the shop.
 
-	printf("anon, prot_none: ");
+	printf("1: ");
 
 	ptr = mmap(NULL, page_size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
 	if (ptr == MAP_FAILED) {
@@ -38,13 +38,69 @@ int main(void)
 
 	examine_vma(ptr);
 
-	printf("anon, prot_read: ");
+	printf("2: ");
 
 	ptr = mmap(NULL, page_size, PROT_READ, MAP_ANON | MAP_PRIVATE, -1, 0);
 	if (ptr == MAP_FAILED) {
 		perror("mmap 1");
 		return EXIT_FAILURE;
 	}
+
+	examine_vma(ptr);
+
+	printf("3: ");
+
+	ptr = mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+	if (ptr == MAP_FAILED) {
+		perror("mmap 1");
+		return EXIT_FAILURE;
+	}
+
+	examine_vma(ptr);
+
+	printf("4: ");
+
+	ptr = mmap(NULL, page_size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_PRIVATE, -1, 0);
+	if (ptr == MAP_FAILED) {
+		perror("mmap 1");
+		return EXIT_FAILURE;
+	}
+
+	examine_vma(ptr);
+
+	printf("5: ");
+
+	ptr = mmap(NULL, page_size, PROT_READ | PROT_WRITE | PROT_EXEC,
+		   MAP_ANON | MAP_PRIVATE | MAP_POPULATE, -1, 0);
+	if (ptr == MAP_FAILED) {
+		perror("mmap 1");
+		return EXIT_FAILURE;
+	}
+
+	examine_vma(ptr);
+
+
+	printf("6: ");
+
+	ptr = mmap(NULL, page_size,
+		   PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_SHARED, -1, 0);
+	if (ptr == MAP_FAILED) {
+		perror("mmap 1");
+		return EXIT_FAILURE;
+	}
+
+	examine_vma(ptr);
+
+	printf("7: ");
+
+	int fd = open("vma.c", O_RDWR);
+	if (fd == -1) {
+		perror("open");
+		return EXIT_FAILURE;
+	}
+
+	ptr = mmap(NULL, page_size,
+		   PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
 	examine_vma(ptr);
 
