@@ -138,7 +138,7 @@ void lookup_vma_flags(void *ptr)
 	unsigned long flags;
 
 	if (fp == NULL) {
-		fprintf(stderr, "Cannot open /dev/vmaflags");
+		fprintf(stderr, "Cannot open /dev/vmaflags\n");
 		exit(1);
 	}
 
@@ -152,7 +152,7 @@ void lookup_vma_flags(void *ptr)
 
 	fp = fopen("/dev/vmaflags", "r");
 
-	if (fscanf(fp, "%lx", &flags)) {
+	if (fscanf(fp, "%lx", &flags) < 0) {
 		perror("reading from /dev/vmaflags");
 		exit(1);
 	}

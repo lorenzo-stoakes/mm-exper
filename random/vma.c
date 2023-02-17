@@ -1,40 +1,16 @@
+#include "shared.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
-#define USE_VMAINFO
+#define USE_VMAFLAGS
 
 static void examine_vma(void *ptr)
 {
-#ifdef USE_VMAINFO
-	unsigned long addr = (unsigned long)ptr;
-	FILE *fp = fopen("/dev/vmainfo", "r+");
-
-	if (fp == NULL) {
-		fprintf(stderr, "Cannot open /dev/vmainfo");
-		exit(1);
-	}
-
-	if (fprintf(fp, "%lu\n", addr) < 0) {
-		perror("writing to /dev/vmainfo");
-		exit(1);
-	}
-
-	fflush(fp);
-	fclose(fp);
-
-	fp = fopen("/dev/vmainfo", "r");
-
-	printf("%lx: ", addr);
-
-	for (char chr = fgetc(fp); chr != EOF; chr = fgetc(fp)) {
-		printf("%c", chr);
-	}
-	fclose(fp);
-
-	printf("\n");
-
+#ifdef USE_VMAFLAGS
+	lookup_vma_flags(ptr);
 #else
 	const long page_size = sysconf(_SC_PAGESIZE);
 
@@ -52,7 +28,7 @@ int main(void)
 
 	// We intentionally leak mappings all over the shop.
 
-	puts("MAP_ANON | MAP_PRIVATE, PROT_NONE");
+	printf("anon, prot_none: ");
 
 	ptr = mmap(NULL, page_size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
 	if (ptr == MAP_FAILED) {
@@ -62,7 +38,7 @@ int main(void)
 
 	examine_vma(ptr);
 
-	puts("MAP_ANON | MAP_PRIVATE, PROT_READ");
+	printf("anon, prot_read: ");
 
 	ptr = mmap(NULL, page_size, PROT_READ, MAP_ANON | MAP_PRIVATE, -1, 0);
 	if (ptr == MAP_FAILED) {
