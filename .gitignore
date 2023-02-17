@@ -21,3 +21,6 @@ random/file_rmap
 random/file_rmap2
 random/forky
 random/forky2
+random/vma
+
+tools/vm_flags
