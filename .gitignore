@@ -12,8 +12,8 @@ pagestat/example
 pagestat/pagestat
 pagestat/pagestat-watch
 
-kernel/*.ko
-kernel/*.dwo
+kernel/**/*.ko
+kernel/**/*.dwo
 
 random/split_vma
 random/merge_split
