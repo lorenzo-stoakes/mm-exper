@@ -10,7 +10,6 @@ static void examine_vma(void *ptr)
 #ifdef USE_VMAINFO
 	unsigned long addr = (unsigned long)ptr;
 	FILE *fp = fopen("/dev/vmainfo", "r+");
-	char buffer[4096];
 
 	if (fp == NULL) {
 		fprintf(stderr, "Cannot open /dev/vmainfo");
