@@ -3,14 +3,48 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-static void trigger_breakpoint(void *ptr)
+#define USE_VMAINFO
+
+static void examine_vma(void *ptr)
 {
+#ifdef USE_VMAINFO
+	unsigned long addr = (unsigned long)ptr;
+	FILE *fp = fopen("/dev/vmainfo", "r+");
+	char buffer[4096];
+
+	if (fp == NULL) {
+		fprintf(stderr, "Cannot open /dev/vmainfo");
+		exit(1);
+	}
+
+	if (fprintf(fp, "%lu\n", addr) < 0) {
+		perror("writing to /dev/vmainfo");
+		exit(1);
+	}
+
+	fflush(fp);
+	fclose(fp);
+
+	fp = fopen("/dev/vmainfo", "r");
+
+	printf("%lx: ", addr);
+
+	for (char chr = fgetc(fp); chr != EOF; chr = fgetc(fp)) {
+		printf("%c", chr);
+	}
+	fclose(fp);
+
+	printf("\n");
+
+#else
 	const long page_size = sysconf(_SC_PAGESIZE);
 
 	// Now madvise MADV_NORMAL to make it easy to put a breakpoint in gdb
 	// (at madvise_walk_vmas()).
 	madvise(ptr, page_size, MADV_NORMAL);
+#endif
 }
+
 
 int main(void)
 {
@@ -27,7 +61,7 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	trigger_breakpoint(ptr);
+	examine_vma(ptr);
 
 	puts("MAP_ANON | MAP_PRIVATE, PROT_READ");
 
@@ -37,7 +71,7 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	trigger_breakpoint(ptr);
+	examine_vma(ptr);
 
 	return EXIT_SUCCESS;
 }

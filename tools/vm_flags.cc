@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <iostream>
 #include <map>
+#include <sstream>
 
 #define BIT(n) (1UL << n)
 
@@ -136,7 +137,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	print_vma_flags(std::stoul(argv[1]));
+	print_vma_flags(std::stoul(argv[1], nullptr, 16));
 
 	return 0;
 }
