@@ -24,5 +24,6 @@ random/forky2
 random/mremap
 random/remap
 random/vma
+random/map_shared
 
 tools/vm_flags
