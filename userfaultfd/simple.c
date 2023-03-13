@@ -55,7 +55,8 @@ int main(void)
 
 	ptr[0] = 'x';
 
-	puts("fork!");
+	pid_t parent_pid = getpid();
+	printf("fork from pid=%d\n", parent_pid);
 	pid_t pid = fork();
 	if (pid == -1)
 		pfatal("fork");
@@ -66,7 +67,7 @@ int main(void)
 		exit(0);
 	}
 
-	printf("child pid =%d\n", pid);
+	printf("child pid=%d\n", pid);
 
 	int status;
 	wait(&status);
