@@ -27,3 +27,7 @@ random/vma
 random/map_shared
 
 tools/vm_flags
+
+userfaultfd/client
+userfaultfd/server
+userfaultfd/simple
