@@ -9,6 +9,12 @@
 
 #define pgoff_t unsigned long
 
+#define __ALIGN_KERNEL(x, a)		__ALIGN_KERNEL_MASK(x, (typeof(x))(a) - 1)
+#define __ALIGN_KERNEL_MASK(x, mask)	(((x) + (mask)) & ~(mask))
+
+#define ALIGN(x, a)		__ALIGN_KERNEL((x), (a))
+#define ALIGN_DOWN(x, a)	__ALIGN_KERNEL((x) - ((a) - 1), (a))
+
 #define READ_ONCE(x) (x)
 
 #define max(x, y) ((x) > (y) ? (x) : (y))

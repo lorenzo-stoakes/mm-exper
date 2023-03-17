@@ -14,8 +14,6 @@
 
 #define MAX_NUM_CPUS (256)
 
-#define ALIGN_DOWN(n, to) (n & ~(to - 1ul))
-
 // Reduced version
 struct vm_area_struct {
 	unsigned long vm_start;
