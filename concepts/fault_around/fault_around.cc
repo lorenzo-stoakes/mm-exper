@@ -98,15 +98,21 @@ std::pair<unsigned long, unsigned long> do_fault_around_take1(struct vm_fault *v
 
 std::pair<unsigned long, unsigned long> do_fault_around(struct vm_fault *vmf, unsigned long fault_around_bytes)
 {
-	pgoff_t pte_off = pte_index(vmf->address);
-	pgoff_t vma_off = vmf->pgoff - vmf->vma.vm_pgoff;
-	pgoff_t nr_pages = READ_ONCE(fault_around_bytes) >> PAGE_SHIFT;
+	unsigned long nr_pages = READ_ONCE(fault_around_bytes) >> PAGE_SHIFT;
+	pgoff_t pte_off = pte_index(vmf->address), vma_off, from_pte, to_pte;
 
-	pgoff_t from = max(pte_off - min(pte_off, vma_off), ALIGN_DOWN(pte_off, nr_pages));
-	pgoff_t to = min3(from + nr_pages, PTRS_PER_PTE,
-			  pte_off + vma_pages(&vmf->vma) - vma_off) - 1;
+	/* The offset of vmf->address within the VMA. */
+	vma_off = vmf->pgoff - vmf->vma.vm_pgoff;
 
-	return { vmf->pgoff + from - pte_off, vmf->pgoff + to - pte_off };
+	/* The PTE offset of the start address, clamped to the VMA. */
+	from_pte = max(ALIGN_DOWN(pte_off, nr_pages),
+		   pte_off - min(pte_off, vma_off));
+
+	/* The PTE offset of the end address clamped to the VMA and PTE. */
+	to_pte = min3(from_pte + nr_pages, PTRS_PER_PTE,
+		  pte_off + vma_pages(&vmf->vma) - vma_off) - 1;
+
+	return { vmf->pgoff + from_pte - pte_off, vmf->pgoff + to_pte - pte_off };
 }
 
 // Get random number between [from, to) * mult and aligned to align.
