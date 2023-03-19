@@ -1,16 +1,18 @@
 # mm
 
 This is a collection of experiments and tools revolving around the linux memory
-management subsystem. This is a sister repo to
-[mm-book](https://github.com/lorenzo-stoakes/mm-book) a book I am writing on the
-linux memory management subsystem.
+management subsystem. Used to assist me in my work writing [The Linux Memory
+Manager](https://linuxmemory.org), a book describing the linux memory management
+subsystem.
 
 ## Building
 
-Simply `make` to compile binaries.
+Varies - make at root builds some things, but things have rapidly 'evolved' into
+something of a tangled mess and some things need manual building and others have
+their own separate make files.
+
+I will sort this out at some point...! :)
 
 ## License
 
-All code is MIT licensed.
-
-[musl](https://musl.libc.org/) code used under [MIT license](musl/COPYRIGHT).
+Once make public, this will be MIT-licensed.
