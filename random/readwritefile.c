@@ -16,12 +16,13 @@ int main(void)
 	}
 
 	// Map shared the file.
-	char *ptr = mmap(NULL, page_size, PROT_READ | PROT_WRITE,
-			 MAP_SHARED, fd, 0);
+	char *ptr = mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd, 0);
 	if (ptr == MAP_FAILED) {
 		perror("mmap");
 		return EXIT_FAILURE;
 	}
+
+	ptr[0] = 'x';
 
 	// _Read_ fault this in.
 	char buf[3];

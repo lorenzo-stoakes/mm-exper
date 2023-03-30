@@ -28,29 +28,36 @@ int main(void)
 	}
 
 	printf("orig mmap=%p\n", ptr);
+
+	ptr[0] = 'x';
+
 	check_vma(ptr, page_size);
 
 	char *ptr2 = mremap(ptr, page_size, page_size,
-			    MREMAP_FIXED | MREMAP_MAYMOVE | MREMAP_DONTUNMAP,
-			    TARGET_PTR2);
+			    MREMAP_MAYMOVE | MREMAP_DONTUNMAP);
 	if (ptr2 == MAP_FAILED) {
 		perror("mremap 2");
 		return EXIT_FAILURE;
 	}
 
+	ptr2[0] = 'y';
+
 	printf("after mremap2=%p\n", ptr2);
 	check_vma(ptr2, page_size);
 
-	char *ptr3 = mremap(ptr, page_size, page_size,
-			    MREMAP_FIXED | MREMAP_MAYMOVE | MREMAP_DONTUNMAP,
-			    TARGET_PTR3);
+	char *ptr3 = mremap(ptr2, page_size, page_size,
+			    MREMAP_MAYMOVE | MREMAP_DONTUNMAP);
 	if (ptr3 == MAP_FAILED) {
 		perror("mremap 3");
 		return EXIT_FAILURE;
 	}
 
+	ptr3[0] = 'z';
+
 	printf("after mremap3=%p\n", ptr3);
 	check_vma(ptr3, page_size);
+
+	printf("%c %c %c\n", ptr[0], ptr2[0], ptr3[0]);
 
 	return EXIT_SUCCESS;
 }

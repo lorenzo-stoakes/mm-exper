@@ -21,7 +21,12 @@ random/file_rmap
 random/file_rmap2
 random/forky
 random/forky2
+random/modify
+random/memfd_repro
 random/mremap
+random/mremap_repro
+random/private
+random/readwritefile
 random/remap
 random/vma
 random/map_shared
