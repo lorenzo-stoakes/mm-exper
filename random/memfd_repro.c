@@ -20,21 +20,10 @@ int main()
 	       return EXIT_FAILURE;
        }
 
-       pid_t pid = fork();
-       if (pid == -1) {
-	       perror("fork");
+       void *ret = mmap(NULL, 4, PROT_READ, MAP_SHARED, fd, 0);
+       if (ret == MAP_FAILED) {
+	       perror("mmap");
 	       return EXIT_FAILURE;
-       }
-
-       if (pid == 0) {
-	       void *ret = mmap(NULL, 4, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	       if (ret == MAP_FAILED) {
-		       perror("mmap");
-		       return EXIT_FAILURE;
-	       }
-       } else {
-	       while (1)
-		       ;
        }
 
        return EXIT_SUCCESS;
