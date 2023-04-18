@@ -5,7 +5,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-int main()
+int normal()
 {
 	struct io_uring_params params = {
 		.flags = 0
@@ -36,12 +36,22 @@ int main()
 		return EXIT_FAILURE;
 	}
 
-#if 0
+	return EXIT_SUCCESS;
+}
+
+int file_broken()
+{
 	int fd = open("test.txt", O_RDWR);
 	if (fd == -1) {
 		perror("open");
 		return EXIT_FAILURE;
 	}
+
+	struct io_uring_params params = {
+		.flags = 0
+	};
+
+	int ring = io_uring_setup(2, &params);
 
 	void *buf2 = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
 			  MAP_SHARED, fd, 0);
@@ -60,7 +70,11 @@ int main()
 		fprintf(stderr, "io_uring_register 2: %s\n", strerror(-ret2));
 		return EXIT_FAILURE;
 	}
-#endif
 
 	return EXIT_SUCCESS;
+}
+
+int main()
+{
+	return normal();
 }
