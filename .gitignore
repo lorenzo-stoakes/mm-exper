@@ -28,6 +28,7 @@ random/mremap_repro
 random/private
 random/readwritefile
 random/remap
+random/rpm
 random/vma
 random/map_shared
 random/uring
