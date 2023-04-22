@@ -25,6 +25,11 @@ int normal()
 		return EXIT_FAILURE;
 	}
 
+	if (mlock(buf, 4096 * 3)) {
+		perror("mlock");
+		return EXIT_FAILURE;
+	}
+
 	struct iovec iov = {
 		.iov_base = buf,
 		.iov_len = 4096 * 10,
