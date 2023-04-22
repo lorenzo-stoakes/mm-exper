@@ -14,7 +14,7 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	char *ptr = mmap(NULL, 4096, PROT_READ, MAP_PRIVATE, fd, 0);
+	char *ptr = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
 	if (ptr == MAP_FAILED) {
 		perror("mmap");
 		return EXIT_FAILURE;
