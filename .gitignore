@@ -27,6 +27,7 @@ random/memfd_repro
 random/mremap
 random/mremap_repro
 random/private
+random/punch
 random/readwritefile
 random/remap
 random/rpm
