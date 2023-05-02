@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
@@ -8,7 +9,7 @@ int main()
 {
 	const long page_size = sysconf(_SC_PAGESIZE);
 
-	int fd = open("test.txt", O_RDWR);
+	int fd = open("/tmp/test.txt", O_RDWR);
 	if (fd == -1) {
 		perror("open");
 		return EXIT_FAILURE;
@@ -21,6 +22,12 @@ int main()
 		perror("mmap");
 		return EXIT_FAILURE;
 	}
+
+	// Now madvise MADV_NORMAL to make it easy to put a breakpoint in gdb
+	// (at madvise_walk_vmas()).
+	madvise(ptr, 3 * page_size, MADV_NORMAL);
+
+	return true;
 
 	// Unmap middle page.
 	if (munmap(ptr + page_size, page_size) == -1) {
