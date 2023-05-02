@@ -23,6 +23,7 @@ random/forky
 random/forky2
 random/hugetlb
 random/modify
+random/mbind-repro
 random/memfd_repro
 random/mremap
 random/mremap_repro
