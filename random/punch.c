@@ -30,7 +30,6 @@ int main()
 	}
 	printf("--- done ---\n");
 
-	//if (madvise(ptr + 3 * page_size, page_size * 2, MADV_REMOVE)) {
 	if (madvise(ptr, page_size * 10, MADV_REMOVE)) {
 		perror("madvise");
 		return EXIT_FAILURE;
