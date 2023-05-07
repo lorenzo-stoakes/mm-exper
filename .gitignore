@@ -1,4 +1,9 @@
 *.o
+*.cmd
+*.symvers
+*.order
+*.mod
+*.mod.c
 
 section-pointers
 test-musl-malloc
@@ -14,6 +19,10 @@ pagestat/pagestat-watch
 
 kernel/**/*.ko
 kernel/**/*.dwo
+
+mad/**/*.ko
+mad/**/*.dwo
+mad/mad
 
 random/split_vma
 random/merge_split
