@@ -4,6 +4,8 @@
 *.order
 *.mod
 *.mod.c
+*.ko
+*.dwo
 
 section-pointers
 test-musl-malloc
@@ -17,11 +19,6 @@ pagestat/example
 pagestat/pagestat
 pagestat/pagestat-watch
 
-kernel/**/*.ko
-kernel/**/*.dwo
-
-mad/**/*.ko
-mad/**/*.dwo
 mad/mad
 
 random/split_vma
