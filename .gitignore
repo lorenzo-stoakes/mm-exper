@@ -43,6 +43,7 @@ random/rpm
 random/vma
 random/map_shared
 random/uring
+random/vma_merge_repro
 
 tools/vm_flags
 
