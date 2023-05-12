@@ -11,6 +11,8 @@
 #include <linux/pageblock-flags.h>
 #include <linux/percpu-defs.h>
 
+//#define LONGTERM
+
 MODULE_AUTHOR("Lorenzo Stoakes <lstoakes@gmail.com>");
 MODULE_DESCRIPTION("mad idea");
 MODULE_LICENSE("GPL");
@@ -59,8 +61,11 @@ static ssize_t gup_uaddr_write(struct file *file, const char __user *in,
 	pr_info("Attempting to GUP page pfn=[%lu]\n", page_to_pfn(curr_page));
 
 	ret = pin_user_pages_unlocked(uaddr, 1, &curr_page,
-				      FOLL_WRITE | FOLL_LONGTERM |
-				      FOLL_UNSAFE_FILE_WRITE);
+				      FOLL_WRITE
+#ifdef LONGTERM
+				      | FOLL_LONGTERM | FOLL_UNSAFE_FILE_WRITE
+#endif
+		);
 	if (IS_ERR_VALUE(ret)) {
 		pr_err("Error [%ld] wheen pinning uaddr=[%lx]\n",
 		       ret, uaddr);
