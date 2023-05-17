@@ -33,6 +33,7 @@ random/mbind-repro
 random/memfd_anon_remove
 random/memfd_repro
 random/mergey
+random/mmap
 random/mremap
 random/mremap_repro
 random/private
