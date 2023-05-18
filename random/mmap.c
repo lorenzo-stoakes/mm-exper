@@ -23,16 +23,17 @@ int main(void)
 	printf("chr=[%c]\n", ptr[0]);
 
 	/* We can just map over an existing mapping... :) */
-	ptr = mmap(ptr, page_size, PROT_READ | PROT_WRITE,
-		   MAP_ANON | MAP_PRIVATE | MAP_POPULATE | MAP_FIXED, -1, 0);
-	if (ptr == MAP_FAILED) {
+	char *ptr2 = mmap(ptr, page_size, PROT_READ | PROT_WRITE,
+			  MAP_ANON | MAP_PRIVATE | MAP_POPULATE | MAP_FIXED, -1, 0);
+	if (ptr2 == MAP_FAILED) {
 		perror("mmap 2");
 
 		return EXIT_FAILURE;
 	}
 
-	printf("chr=[%c]\n", ptr[0]);
-	printf("chr=[%c]\n", ptr[4096]);
+	printf("ptr[0]=%c\n", ptr[0]);
+	printf("ptr2[0]=%c\n", ptr2[0]);
+	printf("ptr[4096]=%c\n", ptr[4096]);
 
 	return EXIT_SUCCESS;
 }
