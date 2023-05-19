@@ -35,5 +35,13 @@ int main(void)
 	printf("ptr2[0]=%c\n", ptr2[0]);
 	printf("ptr[4096]=%c\n", ptr[4096]);
 
+	if (munmap(ptr, 4 * page_size)) {
+		perror("munmap");
+
+		return EXIT_FAILURE;
+	}
+
+	printf("ptr2[0]=%c\n", ptr2[0]);
+
 	return EXIT_SUCCESS;
 }
