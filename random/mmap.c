@@ -41,7 +41,8 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	printf("ptr2[0]=%c\n", ptr2[0]);
+	// Segfaults:-
+	//printf("ptr2[0]=%c\n", ptr2[0]);
 
 	return EXIT_SUCCESS;
 }
