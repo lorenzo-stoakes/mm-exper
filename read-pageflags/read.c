@@ -28,6 +28,8 @@ static bool check_hugetlb(void)
 
 int main(void)
 {
+	const long page_size = sysconf(_SC_PAGESIZE);
+
 	if (getuid() != 0) {
 		fprintf(stderr, "ERROR: Must be run as root.\n");
 		return EXIT_FAILURE;
@@ -35,7 +37,7 @@ int main(void)
 
 	// First allocate a page of memory from the kernel, force _actual_
 	// allocation via MAP_POPULATE.
-	void *ptr = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
+	void *ptr = mmap(NULL, page_size, PROT_READ | PROT_WRITE,
 			 MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
 
 	if (ptr == MAP_FAILED) {
@@ -47,18 +49,18 @@ int main(void)
 		return EXIT_FAILURE;
 
 	// Do something with the page.
-	memset(ptr, 123, 4096);
+	memset(ptr, 123, page_size);
 
 	if (!print_flags_virt(ptr, "modified page"))
 		return EXIT_FAILURE;
 
-	munmap(ptr, 4096);
+	munmap(ptr, page_size);
 
-	void *ptr2 = malloc(4096);
+	void *ptr2 = malloc(page_size);
 	if (!print_flags_virt(ptr2, "initial malloc"))
 		return EXIT_FAILURE;
 
-	memset(ptr2, 123, 4096);
+	memset(ptr2, 123, page_size);
 
 	if (!print_flags_virt(ptr2, "modified malloc"))
 		return EXIT_FAILURE;
@@ -69,7 +71,7 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	char *ptr3 = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
+	char *ptr3 = mmap(NULL, page_size, PROT_READ | PROT_WRITE,
 			  MAP_SHARED | MAP_POPULATE, fd, 0);
 	// We can discard the fd now we've mmap'd it.
 	close(fd);
@@ -87,14 +89,14 @@ int main(void)
 	if (!print_flags_virt(ptr3, "mmap modified file"))
 		return EXIT_FAILURE;
 
-	madvise(ptr3, 4096, MADV_COLD);
+	madvise(ptr3, page_size, MADV_COLD);
 
 	if (!print_flags_virt(ptr3, "mmap modified, cold file"))
 		return EXIT_FAILURE;
 
-	munmap(ptr3, 4096);
+	munmap(ptr3, page_size);
 
-	char *ptr4 = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
+	char *ptr4 = mmap(NULL, page_size, PROT_READ | PROT_WRITE,
 			  MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
 	if (ptr4 == MAP_FAILED) {
 		perror("mmap (4)");
@@ -110,14 +112,14 @@ int main(void)
 		perror("open test.txt");
 		return EXIT_FAILURE;
 	}
-	char *ptr4b = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
+	char *ptr4b = mmap(NULL, page_size, PROT_READ | PROT_WRITE,
 			   MAP_PRIVATE | MAP_POPULATE, fd, 0);
 	if (ptr4b == MAP_FAILED) {
 		perror("mmap (4b)");
 		return EXIT_FAILURE;
 	}
 
-	char *ptr4c = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
+	char *ptr4c = mmap(NULL, page_size, PROT_READ | PROT_WRITE,
 			   MAP_PRIVATE, fd, 0);
 	if (ptr4c == MAP_FAILED) {
 		perror("mmap (4c)");
@@ -164,7 +166,7 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	char *ptr5 = mmap(NULL, 4097, PROT_READ | PROT_WRITE,
+	char *ptr5 = mmap(NULL, page_size + 1, PROT_READ | PROT_WRITE,
 			  MAP_SHARED | MAP_POPULATE, fd, 0);
 	close(fd);
 	if (ptr5 == MAP_FAILED) {
@@ -173,9 +175,9 @@ int main(void)
 	}
 
 	print_flags_virt(ptr5, "mmap file page 1, all bytes");
-	print_flags_virt(ptr5 + 4096, "mmap file page 2, all bytes");
+	print_flags_virt(ptr5 + page_size, "mmap file page 2, all bytes");
 
-	char *ptr6 = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
+	char *ptr6 = mmap(NULL, page_size, PROT_READ | PROT_WRITE,
 			  MAP_SHARED | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
 	if (ptr6 == MAP_FAILED) {
 		perror("mmap (6)");
@@ -194,7 +196,7 @@ int main(void)
 	wait(NULL);
 	print_flags_virt(ptr6, "mmap anon, shared, post fork done");
 
-	munmap(ptr6, 4096);
+	munmap(ptr6, page_size);
 
 	// Must have set up hugetlb pages in /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
 	if (!check_hugetlb()) {
@@ -210,7 +212,7 @@ int main(void)
 	}
 	print_flags_virt(ptr7, "mmap anon, hugetlb");
 	ptr7[0] = 'x';
-	ptr7[4096] = 'y';
+	ptr7[page_size] = 'y';
 	ptr7[2 * 1024 *1024 - 1] = 'z';
 	print_flags_virt(ptr7, "mmap anon, hugetlb, pre sleep, modification");
 	sleep(1);
