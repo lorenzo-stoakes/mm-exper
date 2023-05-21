@@ -43,6 +43,7 @@ random/punch_anon
 random/readwritefile
 random/remap
 random/rpm
+random/stack
 random/vma
 random/map_shared
 random/uring
