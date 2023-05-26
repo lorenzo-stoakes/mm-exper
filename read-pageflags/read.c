@@ -204,19 +204,19 @@ int main(void)
 		return EXIT_SUCCESS;
 	}
 
-	char *ptr7 = mmap(NULL, 2 * 1024 * 1024, PROT_READ | PROT_WRITE,
-			  MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE | MAP_HUGETLB, -1, 0);
-	if (ptr7 == MAP_FAILED) {
+	char *ptr_huge = mmap(NULL, 2 * 1024 * 1024, PROT_READ | PROT_WRITE,
+			      MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE | MAP_HUGETLB, -1, 0);
+	if (ptr_huge == MAP_FAILED) {
 		perror("mmap (7)");
 		return EXIT_FAILURE;
 	}
-	print_flags_virt(ptr7, "mmap anon, hugetlb");
-	ptr7[0] = 'x';
-	ptr7[page_size] = 'y';
-	ptr7[2 * 1024 *1024 - 1] = 'z';
-	print_flags_virt(ptr7, "mmap anon, hugetlb, pre sleep, modification");
+	print_flags_virt(ptr_huge, "mmap anon, hugetlb");
+	ptr_huge[0] = 'x';
+	ptr_huge[page_size] = 'y';
+	ptr_huge[2 * 1024 *1024 - 1] = 'z';
+	print_flags_virt(ptr_huge, "mmap anon, hugetlb, pre sleep, modification");
 	sleep(1);
-	print_flags_virt(ptr7, "mmap anon, hugetlb, post sleep, modification");
+	print_flags_virt(ptr_huge, "mmap anon, hugetlb, post sleep, modification");
 
 	return EXIT_SUCCESS;
 }
