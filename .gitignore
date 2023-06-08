@@ -38,6 +38,7 @@ random/mmap
 random/mprotect
 random/mremap
 random/mremap_repro
+random/munmap
 random/noreserve
 random/private
 random/punch
