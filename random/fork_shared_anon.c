@@ -23,6 +23,8 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
+	ptr_priv[0] = 'x';
+
 	pid_t pid = fork();
 	if (pid == -1) {
 		perror("fork");
@@ -31,6 +33,10 @@ int main(void)
 
 	// Child.
 	if (pid == 0) {
+		// Now madvise MADV_NORMAL to make it easy to put a breakpoint in gdb
+		// (at madvise_walk_vmas()).
+		madvise(ptr_priv, page_size, MADV_NORMAL);
+
 		ptr_shared[0] = 'x';
 		ptr_priv[0] = 'x'; // CoW.
 
