@@ -15,16 +15,21 @@ MODULE_LICENSE("GPL");
 
 DEFINE_XARRAY(xa);
 
-#define NUM_ENTRIES (4096 + 64 + 1)
+#define NUM_ENTRIES (64)
+//#define NUM_ENTRIES (4096 + 64 + 1)
+//#define NUM_ENTRIES (4096 + 4096 * 63)
+//#define NUM_ENTRIES (1025)
 
 #define MAX_DEPTH (5)
 
 static char buf[MAX_DEPTH][NUM_ENTRIES + 1];
 
-static void examine_node(int depth, struct xa_node *node)
+static int examine_node(int depth, struct xa_node *node)
 {
 	int i;
 	int offset = 0;
+
+	int count = 0;
 
 	for (i = 0; i < 64; i++) {
 		void *entry = node->slots[i];
@@ -34,21 +39,33 @@ static void examine_node(int depth, struct xa_node *node)
 			buf[depth][offset++] = '*';
 		} else if (xa_is_node(entry)) {
 			buf[depth][offset++] = 'N';
-			examine_node(depth + 1, xa_to_node(entry));
+			count += examine_node(depth + 1, xa_to_node(entry));
 		}
 	}
 
 	pr_err("IVG: %d: %02d: %s\n", depth, node->shift, buf[depth]);
+
+	return count + 1;
 }
 
 static void examine_xa(void)
 {
-	struct xa_node *node = xa_to_node(xa.xa_head);
+	if (xa_is_node(xa.xa_head)) {
+		struct xa_node *node = xa_to_node(xa.xa_head);
 
-	pr_err("IVG: shift=%d\n", node->shift);
+		pr_err("IVG: num nodes=%d\n", examine_node(0, node));
+		return;
+	}
 
-	examine_node(0, node);
-	pr_err("\n");
+	if (xa_is_value(xa.xa_head) || !xa.xa_head || xa.xa_head == XA_ZERO_ENTRY) {
+		const bool is_empty = xa.xa_head == XA_ZERO_ENTRY ||
+			xa.xa_head == NULL;
+
+		pr_err("IVG: [%c]\n", is_empty ? '.' : '*');
+		return;
+	}
+
+	pr_err("IVG: Unrecognised head value %lu?\n", (unsigned long)xa.xa_head);
 }
 
 static int __init xarray_init(void)
