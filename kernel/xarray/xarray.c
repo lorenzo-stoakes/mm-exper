@@ -15,7 +15,7 @@ MODULE_LICENSE("GPL");
 
 DEFINE_XARRAY(xa);
 
-#define NUM_ENTRIES (64)
+#define NUM_ENTRIES (64 * 64 + 1)
 //#define NUM_ENTRIES (4096 + 64 + 1)
 //#define NUM_ENTRIES (4096 + 4096 * 63)
 //#define NUM_ENTRIES (1025)
