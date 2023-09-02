@@ -31,6 +31,8 @@ random/forky2
 random/hugetlb
 random/modify
 random/mbind-repro
+random/mem
+random/mem_client
 random/memfd_anon_remove
 random/memfd_repro
 random/mergey
