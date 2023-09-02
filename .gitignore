@@ -39,6 +39,8 @@ random/mergey
 random/mmap
 random/mmap_simple
 random/mmap_simple_file
+random/mmap_simple_private_file
+random/mmap_simple_fixed
 random/mprotect
 random/mremap
 random/mremap_repro
