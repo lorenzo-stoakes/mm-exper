@@ -63,6 +63,8 @@ random/vma_merge_repro
 shmem/fork/shmem_fork
 shmem/sysv/shmem_sysv_client
 shmem/sysv/shmem_sysv_server
+shmem/posix/posix_shmem_client
+shmem/posix/posix_shmem_server
 
 tools/vm_flags
 
