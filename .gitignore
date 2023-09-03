@@ -47,6 +47,7 @@ random/mremap_repro
 random/munmap
 random/noreserve
 random/oom
+random/pagemap_tour
 random/private
 random/punch
 random/punch_anon
