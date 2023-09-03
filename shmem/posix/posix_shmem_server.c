@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <sys/shm.h>
 #include <unistd.h>
@@ -30,6 +31,8 @@ int main(void)
 		perror("mmap");
 		return EXIT_FAILURE;
 	}
+
+	memset(ptr, 0, SIZE);
 
 	for (i = 0; i < NUM_LOOPS; i++) {
 		ptr[0] = 'a' + i;
