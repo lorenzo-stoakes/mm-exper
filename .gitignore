@@ -60,6 +60,8 @@ random/map_shared
 random/uring
 random/vma_merge_repro
 
+shmem/fork/shmem_fork
+
 tools/vm_flags
 
 userfaultfd/client
