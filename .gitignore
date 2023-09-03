@@ -65,6 +65,8 @@ shmem/sysv/shmem_sysv_client
 shmem/sysv/shmem_sysv_server
 shmem/posix/posix_shmem_client
 shmem/posix/posix_shmem_server
+shmem/memfd/shmem_memfd_client
+shmem/memfd/shmem_memfd_server
 
 tools/vm_flags
 
