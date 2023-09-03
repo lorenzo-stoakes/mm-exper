@@ -27,8 +27,8 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	/* Do not permit the size to be adjusted henceforth. */
-	if (fcntl(fd, F_ADD_SEALS, F_SEAL_GROW) < 0) {
+	/* Do not permit the size to increase henceforth. */
+	if (fcntl(fd, F_ADD_SEALS, F_SEAL_GROW | F_SEAL_SEAL) < 0) {
 		perror("fcntl");
 		return EXIT_FAILURE;
 	}
@@ -44,6 +44,7 @@ int main(void)
 	pid = getpid();
 	printf("Running at /proc/%d/fd/%d\n", pid, fd);
 
+	/* Wait for client... */
 	while (ptr[1] < 'a') {
 		sleep(1);
 	}
