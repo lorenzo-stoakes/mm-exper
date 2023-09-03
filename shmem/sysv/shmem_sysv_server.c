@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -25,6 +26,8 @@ int main(void)
 		perror("shmat");
 		return EXIT_FAILURE;
 	}
+
+	memset(shm, 0, SIZE);
 
 	for (i = 0; i < NUM_LOOPS; i++) {
 		shm[0] = 'a' + i;
