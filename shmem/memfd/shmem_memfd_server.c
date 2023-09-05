@@ -27,8 +27,9 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	/* Do not permit the size to increase henceforth. */
-	if (fcntl(fd, F_ADD_SEALS, F_SEAL_GROW | F_SEAL_SEAL) < 0) {
+	/* Do not permit the size to change henceforth. */
+	if (fcntl(fd, F_ADD_SEALS,
+		  F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_SEAL) < 0) {
 		perror("fcntl");
 		return EXIT_FAILURE;
 	}
