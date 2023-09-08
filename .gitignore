@@ -47,8 +47,10 @@ random/mremap_repro
 random/munmap
 random/noreserve
 random/oom
+random/overwrite
 random/pagemap_tour
 random/private
+random/private2
 random/punch
 random/punch_anon
 random/readwritefile
