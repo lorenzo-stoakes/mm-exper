@@ -23,6 +23,7 @@ mad/mad
 
 random/split_vma
 random/merge_split
+random/copy_short
 random/file_rmap
 random/file_rmap2
 random/fork_shared_anon
