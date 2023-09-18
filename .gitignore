@@ -10,8 +10,8 @@
 section-pointers
 test-musl-malloc
 
-read-pageflags/read
 read-pageflags/map-private
+read-pageflags/read
 read-pageflags/test2.txt
 read-pageflags/write-test
 
@@ -21,8 +21,6 @@ pagestat/pagestat-watch
 
 mad/mad
 
-random/split_vma
-random/merge_split
 random/copy_short
 random/file_rmap
 random/file_rmap2
@@ -30,18 +28,20 @@ random/fork_shared_anon
 random/forky
 random/forky2
 random/hugetlb
-random/modify
+random/map_shared
 random/mbind-repro
 random/mem
 random/mem_client
 random/memfd_anon_remove
 random/memfd_repro
+random/merge_split
 random/mergey
 random/mmap
 random/mmap_simple
 random/mmap_simple_file
-random/mmap_simple_private_file
 random/mmap_simple_fixed
+random/mmap_simple_private_file
+random/modify
 random/mprotect
 random/mremap
 random/mremap_repro
@@ -58,19 +58,19 @@ random/readwritefile
 random/remap
 random/rpm
 random/rss
+random/split_vma
 random/stack
-random/vma
-random/map_shared
 random/uring
+random/vma
 random/vma_merge_repro
 
 shmem/fork/shmem_fork
-shmem/sysv/shmem_sysv_client
-shmem/sysv/shmem_sysv_server
-shmem/posix/posix_shmem_client
-shmem/posix/posix_shmem_server
 shmem/memfd/shmem_memfd_client
 shmem/memfd/shmem_memfd_server
+shmem/posix/posix_shmem_client
+shmem/posix/posix_shmem_server
+shmem/sysv/shmem_sysv_client
+shmem/sysv/shmem_sysv_server
 
 tools/vm_flags
 
