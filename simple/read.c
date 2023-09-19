@@ -11,7 +11,7 @@ int main(void)
 	struct stat statbuf;
 	char *buf;
 	off_t size;
-	ssize_t bytes_read;
+	ssize_t bytes_;
 
 	if (fd == -1) {
 		perror("open");
