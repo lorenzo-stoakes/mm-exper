@@ -81,3 +81,6 @@ userfaultfd/simple
 concepts/fault_around/fault_around
 
 simple/read
+
+socket/server
+socket/client
