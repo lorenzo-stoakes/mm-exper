@@ -54,6 +54,7 @@ random/private
 random/private2
 random/punch
 random/punch_anon
+random/random
 random/readwritefile
 random/remap
 random/rpm
