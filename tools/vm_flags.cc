@@ -133,7 +133,7 @@ void print_vma_flags(uint64_t flags)
 int main(int argc, char **argv)
 {
 	if (argc < 2) {
-		std::cerr << "usage: " << argv[0] << " [vma flags]\n";
+		std::cerr << "usage: " << argv[0] << " [vma flags in hex]\n";
 		return 1;
 	}
 
