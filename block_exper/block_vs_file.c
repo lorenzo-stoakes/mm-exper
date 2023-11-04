@@ -11,6 +11,8 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
+#include "../read-pageflags/read-pageflags.h"
+
 /*
 
   start
@@ -40,6 +42,25 @@ struct local_hd_geometry {
 
 #define DIV_UP(val, multiple) \
 	(ROUND_UP(val, multiple) / (multiple))
+
+static char next_char(char chr)
+{
+	if (chr < 'a' || chr > 'z')
+		return 'a';
+
+	return chr == 'z' ? 'a' : (chr + 1);
+}
+
+static void print_buffers(char *file_buf, char *dev_buf)
+{
+	printf("file=%s", file_buf);
+	printf("---\n");
+	printf("dev =%s", dev_buf);
+	printf("---\n");
+	print_flags_virt(file_buf, "file");
+	print_flags_virt(dev_buf, "dev");
+	printf("---\n");
+}
 
 static unsigned long *get_block_nums(int fd, unsigned long num_blocks,
 				     unsigned int blksize)
@@ -83,6 +104,7 @@ int main(int argc, char **argv)
 	unsigned long size_in_pages;
 	unsigned long offset, offset_page_start, start_block;
 	struct local_hd_geometry geometry;
+	char next_chr, next_next_chr;
 #ifdef PRINT_BLOCK_NUMS
 	unsigned long i;
 #endif
@@ -161,7 +183,7 @@ int main(int argc, char **argv)
 	       offset_page_start, offset - offset_page_start);
 	printf("---\n");
 
-	dev_buf = mmap(NULL, page_size, PROT_READ,
+	dev_buf = mmap(NULL, page_size, PROT_READ | PROT_WRITE,
 		       MAP_SHARED, dev_fd, offset_page_start);
 	if (dev_buf == MAP_FAILED) {
 		perror("mmap dev");
@@ -170,9 +192,26 @@ int main(int argc, char **argv)
 	close(fd);
 	close(dev_fd);
 
-	printf("%s", file_buf);
-	printf("---\n");
-	printf("%s", &dev_buf[offset - offset_page_start]);
+	dev_buf = &dev_buf[offset - offset_page_start];
+
+	printf("-- read --\n");
+	print_buffers(file_buf, dev_buf);
+
+	next_chr = next_char(file_buf[0]);
+	file_buf[0] = next_chr;
+
+	printf("-- after write to file '%c' --\n", next_chr);
+	print_buffers(file_buf, dev_buf);
+
+	next_next_chr = dev_buf[0];
+	do {
+		next_next_chr = next_char(next_next_chr);
+	} while (next_next_chr == next_chr);
+
+	dev_buf[0] = next_next_chr;
+
+	printf("-- after write to dev '%c' --\n", next_next_chr);
+	print_buffers(file_buf, dev_buf);
 
 	return EXIT_SUCCESS;
 }
