@@ -72,7 +72,7 @@ int main(void)
 	}
 
 	char *ptr3 = mmap(NULL, page_size, PROT_READ | PROT_WRITE,
-			  MAP_SHARED | MAP_POPULATE, fd, 0);
+			  MAP_SHARED, fd, 0);
 	// We can discard the fd now we've mmap'd it.
 	close(fd);
 
@@ -80,6 +80,10 @@ int main(void)
 		perror("mmap test.txt");
 		return EXIT_FAILURE;
 	}
+
+	static volatile char dummy;
+	dummy = ptr3[0];
+	(void)dummy;
 
 	if (!print_flags_virt(ptr3, "mmap file"))
 		return EXIT_FAILURE;

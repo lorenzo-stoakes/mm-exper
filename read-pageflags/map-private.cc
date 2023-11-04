@@ -135,6 +135,11 @@ struct page_state {
 			mapcount == that.mapcount;
 	}
 
+	bool operator!=(const page_state& that)
+	{
+		return !operator==(that);
+	}
+
 	volatile char* ptr;
 	uint64_t pagemap;
 	uint64_t pfn;

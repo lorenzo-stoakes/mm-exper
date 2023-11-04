@@ -186,6 +186,37 @@ static int get_refcount(uint64_t pfn)
 	return ret;
 }
 
+// TODO: Terrible duplication.
+static void print_page_buffers(uint64_t pfn)
+{
+	char buf[255];
+
+	FILE *fp = fopen("/dev/pagebuffers", "r+");
+	if (fp == NULL)
+		return;
+
+	if (fprintf(fp, "%lu\n", pfn) < 0) {
+		perror("writing to /dev/pagebuffers");
+		exit(1);
+	}
+
+	fflush(fp);
+	fclose(fp);
+
+	fp = fopen("/dev/pagebuffers", "r");
+
+	int count = fread(buf, sizeof(char), sizeof(buf), fp);
+	if (count == 0) {
+		perror("reading from /dev/pagebuffers");
+		exit(1);
+	}
+	fclose(fp);
+
+	buf[count] = '\0';
+
+	printf("page_buffers=%s ", buf);
+}
+
 // Prints pagemap flags.
 static void print_pagemap_flags(uint64_t val)
 {
@@ -402,6 +433,8 @@ bool print_flags_virt_precalc(const void *ptr,
 	const int refcount = get_refcount(pfn);
 	if (refcount != -1)
 		printf("refcount=%d ", refcount);
+
+	print_page_buffers(pfn);
 
 	if (mapcount == INVALID_VALUE)
 		printf("mapcount=(failed) ");
