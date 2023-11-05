@@ -213,5 +213,50 @@ int main(int argc, char **argv)
 	printf("-- after write to dev '%c' --\n", next_next_chr);
 	print_buffers(file_buf, dev_buf);
 
+	msync(dev_buf, page_size, MS_SYNC);
+
+	printf("-- after msync DEV --\n");
+	print_buffers(file_buf, dev_buf);
+
+	// Sync file first.
+	msync(file_buf, page_size, MS_SYNC);
+
+	do {
+		next_next_chr = next_char(next_next_chr);
+	} while (next_next_chr == next_chr);
+	dev_buf[0] = next_next_chr;
+
+	printf("-- after write to dev '%c' --\n", next_next_chr);
+	print_buffers(file_buf, dev_buf);
+
+	msync(dev_buf, page_size, MS_SYNC);
+
+	printf("-- after msync DEV --\n");
+	print_buffers(file_buf, dev_buf);
+
+	do {
+		next_chr = next_char(next_chr);
+	} while (next_chr == next_next_chr);
+
+	file_buf[0] = next_chr;
+
+	printf("-- after set file_buf to '%c' --\n", next_chr);
+	print_buffers(file_buf, dev_buf);
+
+	// Sync file first.
+	msync(file_buf, page_size, MS_SYNC);
+
+	do {
+		next_next_chr = next_char(next_next_chr);
+	} while (next_next_chr == next_chr);
+
+	dev_buf[0] = next_next_chr;
+
+	printf("-- after msync FILE, set dev_buf to '%c' --\n", next_next_chr);
+	print_buffers(file_buf, dev_buf);
+
+	// Sync dev...
+	//msync(dev_buf, page_size, MS_SYNC);
+
 	return EXIT_SUCCESS;
 }
