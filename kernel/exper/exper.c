@@ -48,7 +48,7 @@ static void read_buffer_head(struct buffer_head *bh) {
 	CHECK_FLAG(BH_New, "N");
 	CHECK_FLAG(BH_Async_Read, "Ar");
 	CHECK_FLAG(BH_Async_Write, "Aw");
-	CHECK_FLAG(BH_Delay, "D");
+	CHECK_FLAG(BH_Delay, "De");
 	CHECK_FLAG(BH_Boundary, "B");
 	CHECK_FLAG(BH_Write_EIO, "Ew");
 	CHECK_FLAG(BH_Unwritten, "Un");
