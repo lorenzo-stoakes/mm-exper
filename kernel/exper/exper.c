@@ -2,6 +2,7 @@
 #include <linux/fs.h>
 #include <linux/gfp.h>
 #include <linux/init.h>
+#include <linux/list.h>
 #include <linux/miscdevice.h>
 #include <linux/mm.h>
 #include <linux/mm_types.h>
@@ -157,12 +158,80 @@ static struct miscdevice refcount_dev = {
 	.fops = &refcount_fops
 };
 
+static void list_exper(void)
+{
+	struct obj {
+		int val;
+		struct list_head node;
+	};
+	struct obj *curr;
+
+	struct obj obj1 = {
+		.val = 1,
+	};
+
+	struct obj obj2 = {
+		.val = 2,
+	};
+
+	struct obj obj3 = {
+		.val = 3,
+	};
+
+	struct obj obj4 = {
+		.val = 4,
+	};
+
+	LIST_HEAD(a);
+	LIST_HEAD(b);
+
+	list_add_tail(&obj1.node, &a);
+	list_add_tail(&obj2.node, &a);
+
+	list_add_tail(&obj3.node, &b);
+	list_add_tail(&obj4.node, &b);
+
+	pr_info("List A:\n");
+	list_for_each_entry(curr, &a, node) {
+		pr_info("entry: %d\n", curr->val);
+	}
+
+	pr_info("List B:\n");
+	list_for_each_entry(curr, &b, node) {
+		pr_info("entry: %d\n", curr->val);
+	}
+
+	list_splice_init(&b, &a);
+
+	pr_info("Post splice b-> a\n");
+
+	pr_info("List A:\n");
+	list_for_each_entry(curr, &a, node) {
+		pr_info("entry: %d\n", curr->val);
+	}
+
+	pr_info("List B:\n");
+	list_for_each_entry(curr, &b, node) {
+		pr_info("entry: %d\n", curr->val);
+	}
+
+	pr_info("Reverse through list:\n");
+
+	while (!list_empty(&a)) {
+		curr = list_entry(a.prev, struct obj, node);
+		pr_info("entry: %d\n", curr->val);
+		list_del_init(&curr->node);
+	}
+}
+
 static int __init exper_init(void)
 {
 	struct page *pg;
 	char *chrs_raw;
 	char *chrs_kmalloc;
 	int err;
+
+	list_exper();
 
 	pg = alloc_page(GFP_KERNEL);
 
