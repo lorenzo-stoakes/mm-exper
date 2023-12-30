@@ -70,7 +70,9 @@ static void examine_xa(void)
 
 static int __init xarray_init(void)
 {
+#ifdef ADD_SEQUENTIALLY
 	int i;
+
 	XA_STATE(xas, &xa, 0);
 
 	for (i = 0; i < NUM_ENTRIES; i++) {
@@ -93,6 +95,7 @@ static int __init xarray_init(void)
 		}
 	}
 
+
 	for (i = 0; i < NUM_ENTRIES; i++) {
 		unsigned long idx = i;
 		void *entry;
@@ -113,6 +116,11 @@ static int __init xarray_init(void)
 			return -EINVAL;
 		}
 	}
+#else
+	// Add isolated entry to demonstrate that the xarray pads itself with
+	// empty entries up to this new entry.
+	xa_store(&xa, NUM_ENTRIES - 1, xa_mk_value(NUM_ENTRIES - 1), GFP_KERNEL);
+#endif
 
 	examine_xa();
 
