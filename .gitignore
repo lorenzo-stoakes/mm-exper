@@ -74,6 +74,7 @@ shmem/sysv/shmem_sysv_client
 shmem/sysv/shmem_sysv_server
 
 tools/vm_flags
+tools/big_dirty
 
 userfaultfd/client
 userfaultfd/server
