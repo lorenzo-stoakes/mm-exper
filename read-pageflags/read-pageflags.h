@@ -39,6 +39,9 @@ bool print_flags_virt_precalc(const void *ptr, uint64_t pagemap, uint64_t pfn,
 			      const struct map_data* mapfields,
 			      const char *descr);
 
+// Prints flags for a physical PFN.
+void print_flags_phys(uint64_t pfn, const char *descr);
+
 // Retrieves kpageflags as described at
 // https://www.kernel.org/doc/html/latest/admin-guide/mm/pagemap.html for the
 // specified physical page at PFN `pfn`.

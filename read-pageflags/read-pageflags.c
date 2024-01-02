@@ -397,6 +397,43 @@ static void print_map_data(const struct map_data* mapfields)
 #endif
 }
 
+void print_flags_phys(uint64_t pfn, const char *descr)
+{
+	if (pfn == INVALID_VALUE) {
+		printf("(not present) [%s]\n", descr);
+		return;
+	} else if (pfn == 0) {
+		printf("(cannot retrieve PFN) [%s]\n", descr);
+		return;
+	}
+
+	printf("              : [    ] [     ] pfn=%lu", pfn);
+
+	const uint64_t kpageflags = read_kpageflags(pfn);
+
+	if (kpageflags == INVALID_VALUE) {
+		printf("(cannot retrieve kpageflags) [%s]\n", descr);
+		return;
+	}
+
+	const int refcount = get_refcount(pfn);
+	if (refcount != -1)
+		printf("refcount=%d ", refcount);
+
+	print_page_buffers(pfn);
+
+	const uint64_t mapcount = read_mapcount(pfn);
+
+	if (mapcount == INVALID_VALUE)
+		printf("mapcount=(failed) ");
+	else
+		printf("mapcount=%lu ", mapcount);
+
+	print_kpageflags(kpageflags);
+
+	printf(" [%s]\n", descr);
+}
+
 bool print_flags_virt_precalc(const void *ptr,
 			      uint64_t pagemap, uint64_t pfn,
 			      uint64_t kpageflags, uint64_t mapcount,
