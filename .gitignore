@@ -14,6 +14,7 @@ read-pageflags/map-private
 read-pageflags/read
 read-pageflags/test2.txt
 read-pageflags/write-test
+read-pageflags/readahead
 
 pagestat/example
 pagestat/pagestat
