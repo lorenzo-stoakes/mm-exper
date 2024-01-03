@@ -11,13 +11,13 @@ function drop_caches()
 for count in $(seq 256); do
 	drop_caches
 
-	i=$count
+	i=1
 
-	while [[ $i -lt 256 ]]; do
-		echo "--- $i / $count ---"
+	while [[ $i -le 256 ]]; do
+		echo "--- $((i - 1)) / $count ---"
 		sudo dmesg -C
-		sudo ./readahead $count
-		dmesg | grep IVG | grep $inode
+		sudo ./readahead $((i - 1)) $count
+		dmesg | grep IVG | grep $inode || true
 		echo "-------------------"
 		i=$((i+$count))
 	done
