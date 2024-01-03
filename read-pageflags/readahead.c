@@ -8,9 +8,23 @@
 
 #define NUM_PAGES (256)
 
-int main(void)
+int main(int argc, char **argv)
 {
-	char buf[4096];
+	if (argc < 2) {
+		fprintf(stderr, "usage: %s [interval size in pages]\n", argv[0]);
+		return EXIT_FAILURE;
+	}
+
+	const int count = atoi(argv[1]);
+
+	if (count < 1 || count > NUM_PAGES) {
+		fprintf(stderr, "invalid count %d\n", count);
+		return EXIT_FAILURE;
+	}
+
+	const size_t size = count * sysconf(_SC_PAGESIZE);
+
+	char *buf = malloc(size);
 
 	int fd = open("readahead.dat", O_RDWR);
 	if (fd < 0) {
@@ -18,27 +32,10 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	if (read(fd, buf, 4096) < 0) {
+	if (read(fd, buf, count * 4096) < 0) {
 		perror("read");
 		return EXIT_FAILURE;
 	}
-
-	// mmap to get a VA.
-	const void *ptr = mmap(NULL, 4096, PROT_READ, MAP_SHARED, fd, 0);
-	if (ptr == MAP_FAILED) {
-		perror("mmap");
-		return EXIT_FAILURE;
-	}
-
-	uint64_t pfn = read_pfn(ptr);
-	if (pfn == INVALID_VALUE) {
-		fprintf(stderr, "Cannot extract PFN for VA %p\n", ptr);
-		return EXIT_FAILURE;
-	}
-
-	printf("pfn=%lu\n", pfn);
-
-	close(fd);
 
 	return EXIT_SUCCESS;
 }
