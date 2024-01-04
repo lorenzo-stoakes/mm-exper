@@ -8,17 +8,36 @@ function drop_caches()
 	echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
 }
 
-for count in $(seq 256); do
-	drop_caches
 
-	i=1
+function do_looped()
+{
+	for count in $(seq 256); do
+		drop_caches
 
-	while [[ $i -le 256 ]]; do
-		echo "--- $((i - 1)) / $count ---"
+		i=1
+
+		while [[ $i -le 256 ]]; do
+			echo "--- $((i - 1)) / $count ---"
+			sudo dmesg -C
+			sudo ./readahead $((i - 1)) $count
+			dmesg | grep IVG | grep $inode || true
+			echo "-------------------"
+			i=$((i+$count))
+		done
+	done
+}
+
+function do_unlooped()
+{
+	for count in $(seq 256); do
+		drop_caches
+
+		echo "--- count=$count ---"
 		sudo dmesg -C
-		sudo ./readahead $((i - 1)) $count
+		sudo ./readahead $count
 		dmesg | grep IVG | grep $inode || true
 		echo "-------------------"
-		i=$((i+$count))
 	done
-done
+}
+
+do_unlooped
