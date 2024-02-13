@@ -61,6 +61,7 @@ random/readwritefile
 random/remap
 random/rpm
 random/rss
+random/shared_rss
 random/split_vma
 random/stack
 random/uring
