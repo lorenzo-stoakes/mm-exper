@@ -29,6 +29,7 @@ random/fork_shared_anon
 random/forky
 random/forky2
 random/hugetlb
+random/hugetlb2
 random/map_shared
 random/mbind-repro
 random/mem
