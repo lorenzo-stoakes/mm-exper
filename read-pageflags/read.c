@@ -202,6 +202,16 @@ int main(void)
 
 	munmap(ptr6, page_size);
 
+	char *ptr7 = mmap(NULL, page_size, PROT_READ | PROT_WRITE,
+			  MAP_PRIVATE | MAP_ANON | MAP_NORESERVE | MAP_POPULATE,
+			  -1, 0);
+	if (ptr7 == MAP_FAILED) {
+		perror("mmap (7)");
+		return EXIT_FAILURE;
+	}
+
+	print_flags_virt(ptr7, "mmap anon, noreserve");
+
 	// Must have set up hugetlb pages in /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
 	if (!check_hugetlb()) {
 		puts("[hugetlb pages not availble, skipping tests]");
