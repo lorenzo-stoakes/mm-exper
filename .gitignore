@@ -36,6 +36,7 @@ random/mem
 random/mem_client
 random/memfd_anon_remove
 random/memfd_repro
+random/merge_cases
 random/merge_split
 random/mergey
 random/mmap
