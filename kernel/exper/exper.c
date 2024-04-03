@@ -249,8 +249,8 @@ static int __init exper_init(void)
 
 	kfree(chrs_kmalloc);
 
-	pr_err("HUGETLB_PAGE_ORDER = %u, MAX_ORDER = %u, pageblock_order = %u\n",
-	       HUGETLB_PAGE_ORDER, MAX_ORDER, pageblock_order);
+	pr_err("HUGETLB_PAGE_ORDER = %u, pageblock_order = %u\n",
+	       HUGETLB_PAGE_ORDER, pageblock_order);
 
 	err = misc_register(&refcount_dev);
 	if (err)
