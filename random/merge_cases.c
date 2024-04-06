@@ -13,6 +13,8 @@ static void *base;
 // First valid address in SECOND reserved memory range,
 static void *rebase;
 
+#define NUM_PAGES (10)
+
 static void fatal(const char *msg)
 {
 	const int err = errno;
@@ -32,7 +34,7 @@ static void kmsg(const char *msg)
 	if (file == NULL)
 		fatal("open");
 
-	fprintf(file, "<userland> %d: %s\n", getpid(), msg);
+	fprintf(file, "mmap: <userland> %d: %s\n", getpid(), msg);
 
 	fclose(file);
 }
@@ -47,15 +49,33 @@ static void *reserve(size_t size)
 	return ret;
 }
 
-static void map(size_t pg_offset, size_t pgs)
+static bool do_map(size_t pg_offset, size_t pgs, bool read, bool write)
 {
 	const long page_size = sysconf(_SC_PAGESIZE);
 	void *ptr = mmap(base + pg_offset * page_size,
-			 pgs * page_size, PROT_READ | PROT_WRITE,
+			 pgs * page_size,
+			 (read ? PROT_READ : 0) | (write ? PROT_WRITE : 0),
 			 MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
 
-	if (ptr == MAP_FAILED)
+	return ptr != MAP_FAILED;
+}
+
+static void map(size_t pg_offset, size_t pgs)
+{
+	if (!do_map(pg_offset, pgs, true, true))
 		fatal("mmap() in map()");
+}
+
+static void map_ro(size_t pg_offset, size_t pgs)
+{
+	if (!do_map(pg_offset, pgs, true, false))
+		fatal("mmap() in map_ro()");
+}
+
+static void map_none(size_t pg_offset, size_t pgs)
+{
+	if (!do_map(pg_offset, pgs, false, false))
+		fatal("mmap() in map_none()");
 }
 
 static void remap(size_t pg_offset, size_t pgs, size_t remap_pg_offset)
@@ -97,7 +117,32 @@ static void unmap(size_t pg_offset, size_t pgs)
 static void reunmap(size_t remap_pg_offset, size_t pgs)
 {
 	if (!do_unmap(rebase, remap_pg_offset, pgs))
-		fatal("munmap() in unmap2()");
+		fatal("munmap() in reunmap()");
+}
+
+static bool do_mprotect(size_t pg_offset, size_t pgs, bool read, bool write)
+{
+	const long page_size = sysconf(_SC_PAGESIZE);
+	return !mprotect(base + pg_offset * page_size, pgs * page_size,
+			 (read ? PROT_READ : 0) | (write ? PROT_WRITE : 0));
+}
+
+static void mprotect_none(size_t pg_offset, size_t pgs)
+{
+	if (!do_mprotect(pg_offset, pgs, false, false))
+		fatal("mprotect in mprotect_none()");
+}
+
+static void mprotect_ro(size_t pg_offset, size_t pgs)
+{
+	if (!do_mprotect(pg_offset, pgs, true, false))
+		fatal("mprotect in mprotect_ro()");
+}
+
+static void mprotect_rw(size_t pg_offset, size_t pgs)
+{
+	if (!do_mprotect(pg_offset, pgs, true, true))
+		fatal("mprotect in mprotect_rw()");
 }
 
 static void mmap_cases(void)
@@ -181,20 +226,20 @@ static void mremap_cases(void)
 
 static void mremap_expand_cases(void)
 {
-	// x....
+	// x..
 	map(0, 1);
-	// x.x..
+	// x.x
 	map(2, 1);
 
-	// xxx..
+	// xxx
 	kmsg("mremap [expand]: case 1");
 	remap_expand(0, 1, 2);
 
-	// .....
+	// ...
 	unmap(0, 3);
-	// x....
+	// x..
 	map(0, 1);
-	// xx...
+	// xx.
 	kmsg("mremap [expand]: case 2");
 	remap_expand(0, 1, 2);
 
@@ -202,13 +247,58 @@ static void mremap_expand_cases(void)
 	// one, I don't think case 3 can be hit.
 }
 
-// TODO: vma_modify() cases.
+static void mprotect_cases(void)
+{
+	// ww.
+	map(0, 2);
+	// wwr
+	map_ro(2, 1);
+	// wrr
+	kmsg("mprotect: case 4");
+	mprotect_ro(1, 1);
+	// wwr
+	kmsg("mprotect: case 5");
+	mprotect_rw(1, 1);
+
+	// ...
+	unmap(0, 3);
+	// w..
+	map(0, 1);
+	// wr.
+	map_ro(1, 1);
+	// wrw
+	map(2, 1);
+	// www
+	kmsg("mprotect: case 6");
+	mprotect_rw(1, 1);
+
+	// wnw
+	mprotect_none(1, 1);
+	// wn.
+	unmap(2, 1);
+	// ww.
+	kmsg("mprotect: case 7");
+	mprotect_rw(1, 1);
+
+	// rw.
+	mprotect_ro(0, 1);
+	// ww.
+	kmsg("mprotect: case 8");
+	mprotect_rw(0, 1);
+}
 
 static void init(void)
 {
 	const long page_size = sysconf(_SC_PAGESIZE);
-	base = reserve(10 * page_size);
-	rebase = reserve(10 * page_size);
+	base = reserve(NUM_PAGES * page_size);
+	rebase = reserve(NUM_PAGES * page_size);
+	char buf[255];
+
+	sprintf(buf, "  base: %lx - %lx", base, base + NUM_PAGES * page_size);
+	kmsg(buf);
+
+	sprintf(buf, "rebase: %lx - %lx", rebase, rebase + NUM_PAGES * page_size);
+	kmsg(buf);
 }
 
 int main(void)
@@ -218,6 +308,7 @@ int main(void)
 	mmap_cases();
 	mremap_cases();
 	mremap_expand_cases();
+	mprotect_cases();
 
 	return EXIT_SUCCESS;
 }
