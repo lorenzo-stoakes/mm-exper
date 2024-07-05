@@ -35,10 +35,10 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	// First allocate a page of memory from the kernel, force _actual_
-	// allocation via MAP_POPULATE.
+	// First allocate a page of memory from the kernel.
 	void *ptr = mmap(NULL, page_size, PROT_READ | PROT_WRITE,
-			 MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
+			 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	((char *)ptr)[0] = 'x';
 
 	if (ptr == MAP_FAILED) {
 		perror("mmap");
@@ -101,7 +101,8 @@ int main(void)
 	munmap(ptr3, page_size);
 
 	char *ptr4 = mmap(NULL, page_size, PROT_READ | PROT_WRITE,
-			  MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
+			  MAP_PRIVATE | MAP_ANONYMOUS , -1, 0);
+
 	if (ptr4 == MAP_FAILED) {
 		perror("mmap (4)");
 		return EXIT_FAILURE;
@@ -117,11 +118,13 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 	char *ptr4b = mmap(NULL, page_size, PROT_READ | PROT_WRITE,
-			   MAP_PRIVATE | MAP_POPULATE, fd, 0);
+			   MAP_PRIVATE, fd, 0);
 	if (ptr4b == MAP_FAILED) {
 		perror("mmap (4b)");
 		return EXIT_FAILURE;
 	}
+
+	ptr4b[0] = 'x';
 
 	char *ptr4c = mmap(NULL, page_size, PROT_READ | PROT_WRITE,
 			   MAP_PRIVATE, fd, 0);
@@ -129,6 +132,8 @@ int main(void)
 		perror("mmap (4c)");
 		return EXIT_FAILURE;
 	}
+
+	ptr4c[0] = 'x';
 
 	close(fd);
 
@@ -171,7 +176,9 @@ int main(void)
 	}
 
 	char *ptr5 = mmap(NULL, page_size + 1, PROT_READ | PROT_WRITE,
-			  MAP_SHARED | MAP_POPULATE, fd, 0);
+			  MAP_SHARED, fd, 0);
+	ptr5[0] = 'x';
+
 	close(fd);
 	if (ptr5 == MAP_FAILED) {
 		perror("mmap (5)");
@@ -182,7 +189,8 @@ int main(void)
 	print_flags_virt(ptr5 + page_size, "mmap file page 2, all bytes");
 
 	char *ptr6 = mmap(NULL, page_size, PROT_READ | PROT_WRITE,
-			  MAP_SHARED | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
+			  MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+	ptr6[0] = 'x';
 	if (ptr6 == MAP_FAILED) {
 		perror("mmap (6)");
 		return EXIT_FAILURE;
@@ -203,8 +211,8 @@ int main(void)
 	munmap(ptr6, page_size);
 
 	char *ptr7 = mmap(NULL, page_size, PROT_READ | PROT_WRITE,
-			  MAP_PRIVATE | MAP_ANON | MAP_NORESERVE | MAP_POPULATE,
-			  -1, 0);
+			  MAP_PRIVATE | MAP_ANON | MAP_NORESERVE, -1, 0);
+	ptr7[0] = 'x';
 	if (ptr7 == MAP_FAILED) {
 		perror("mmap (7)");
 		return EXIT_FAILURE;
@@ -219,7 +227,8 @@ int main(void)
 	}
 
 	char *ptr_huge = mmap(NULL, 2 * 1024 * 1024, PROT_READ | PROT_WRITE,
-			      MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE | MAP_HUGETLB, -1, 0);
+			      MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
+	ptr_huge[0] = 'x';
 	if (ptr_huge == MAP_FAILED) {
 		perror("mmap (7)");
 		return EXIT_FAILURE;
