@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/mman.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -48,12 +49,20 @@ int main(void)
 		pfatal("pthread_create");
 	}
 
-	char *ptr = map_page(false);
-	printf("mapped %p\n", ptr);
+	char *ptr = mmap(NULL, 3*4096, PROT_READ | PROT_WRITE,
+			 MAP_ANON | MAP_PRIVATE, -1, 0);
+	if (ptr == MAP_FAILED) {
+		pfatal("mmap");
+	}
 
-	register_page_range(uffd, ptr, 1);
+	register_page_range(uffd, ptr, 3);
 
-	ptr[0] = 'x';
+        ptr[2*4096] = 'x';
+
+	if (mprotect(ptr + 2*4096, 4096, PROT_NONE))
+	pfatal("mprotect");
+
+        ptr[2*4096] = 'x';
 
 	pid_t parent_pid = getpid();
 	printf("fork from pid=%d\n", parent_pid);
