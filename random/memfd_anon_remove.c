@@ -13,7 +13,7 @@ int main()
 	       return EXIT_FAILURE;
        }
 
-       if (ftruncate(fd, 4096)) {
+       if (ftruncate(fd, 4096UL * 1024 * 1024)) {
 	       perror("ftruncate");
 	       return EXIT_FAILURE;
        }
