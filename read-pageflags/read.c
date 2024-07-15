@@ -220,6 +220,24 @@ int main(void)
 
 	print_flags_virt(ptr7, "mmap anon, noreserve");
 
+	int ro_fd = open("test_ro.txt", O_RDONLY);
+	if (ro_fd < 0) {
+		perror("open test_ro.txt");
+		return EXIT_FAILURE;
+	}
+
+	char *ptr8 = mmap(NULL, page_size, PROT_READ, MAP_SHARED, ro_fd, 0);
+	if (ptr8 == MAP_FAILED) {
+		perror("mmap (8)");
+		return EXIT_FAILURE;
+	}
+
+	dummy = ptr8[0];
+
+	print_flags_virt(ptr8, "mmap file, readonly");
+
+	/*** huge-only below. ***/
+
 	// Must have set up hugetlb pages in /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
 	if (!check_hugetlb()) {
 		puts("[hugetlb pages not availble, skipping tests]");
