@@ -35,7 +35,12 @@ int main()
 
 	trigger_gdb(ptr, size);
 
-	munmap(mmap, size);
+	if (munmap(ptr, size)) {
+		perror("munmap");
+		return EXIT_FAILURE;
+	}
+
+	return 0;
 
 	// anon MAP_HUGETLB method.
 
