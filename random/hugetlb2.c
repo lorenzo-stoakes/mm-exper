@@ -1,7 +1,6 @@
 #define _GNU_SOURCE
 #include <fcntl.h>
 #include <stdbool.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,8 +38,6 @@ int main()
 		perror("munmap");
 		return EXIT_FAILURE;
 	}
-
-	return 0;
 
 	// anon MAP_HUGETLB method.
 
