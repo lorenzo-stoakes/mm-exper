@@ -78,6 +78,12 @@ random/uring
 random/vma
 random/vma_merge_repro
 
+random/guard_mlock
+random/hugetlb_repro
+random/mremap_unmap
+random/start_end_repro
+random/guard
+
 repros/binder_repro
 repros/repro
 repros/repro2
