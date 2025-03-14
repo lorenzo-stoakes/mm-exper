@@ -84,6 +84,7 @@ random/mremap_unmap
 random/start_end_repro
 random/guard
 random/procmap
+random/mprotect_shrinking
 
 repros/binder_repro
 repros/repro
