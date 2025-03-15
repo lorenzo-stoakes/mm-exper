@@ -86,6 +86,8 @@ random/guard
 random/procmap
 random/mprotect_shrinking
 
+random/mremap_bench
+
 repros/binder_repro
 repros/repro
 repros/repro2
