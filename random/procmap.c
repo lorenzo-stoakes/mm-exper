@@ -12,6 +12,7 @@
 #include <sys/syscall.h>
 
 #define MREMAP_RELOCATE_ANON 8
+#define MREMAP_MUST_RELOCATE_ANON 16
 
 struct self_procmap {
 	int fd;
@@ -124,7 +125,7 @@ static void mremap_move(char *ptr, int src_offset, int tgt_offset, int num_pages
 	void *res;
 
 	if (relocate_anon)
-		flags |= MREMAP_RELOCATE_ANON;
+		flags |= MREMAP_MUST_RELOCATE_ANON;
 
 	res = sys_mremap(&ptr[src_offset * page_size], num_pages * page_size,
 			 num_pages * page_size, flags,
@@ -363,7 +364,7 @@ static void do_mremap_mprotect(struct mremap_merge_config *conf)
 	unsigned long mremap_flags = MREMAP_FIXED | MREMAP_MAYMOVE;
 
 	if (conf->relocate_anon)
-		mremap_flags |= MREMAP_RELOCATE_ANON;
+		mremap_flags |= MREMAP_MUST_RELOCATE_ANON;
 
 	/* Hackily establish a PROT_NONE region we can operate in. */
 	ptr = mmap(NULL, 100 * page_size, PROT_NONE, MAP_ANON | MAP_PRIVATE,
