@@ -27,6 +27,8 @@ struct relocate_struct {
 	bool nohuge;
 	unsigned long old_len;
 	unsigned long new_len;
+	unsigned long pop_len;
+	unsigned long align;
 
 	/* Output */
 	unsigned long time_ns;
@@ -40,35 +42,89 @@ static void *sys_mremap(void *old_address, unsigned long old_size,
 			       (unsigned long)new_address);
 }
 
-static char *map_and_populate_region(unsigned long len, bool nohuge)
+static char *mmap_aligned(unsigned long len, unsigned long align, int prot)
 {
-	char *ptr = mmap(NULL, len, PROT_READ | PROT_WRITE,
-			 MAP_ANON | MAP_PRIVATE, -1, 0);
+	/* Provide space for alignment. */
+	unsigned long new_len = len + 2 * align;
+	unsigned long orig_addr, new_addr;
+	char *ptr;
 
-	if (ptr == MAP_FAILED)
+	ptr = mmap(NULL, new_len, prot, MAP_ANON | MAP_PRIVATE, -1, 0);
+	if (ptr == MAP_FAILED) {
+		perror("mmap_aligned() mmap");
+		return NULL;
+	}
+
+	orig_addr = (unsigned long)ptr;
+
+	if (!align)
+		goto out;
+
+	munmap(ptr, new_len);
+
+	new_addr = (orig_addr + align) & ~(align - 1);
+	if (new_addr > orig_addr) {
+		ptr = mmap((void *)new_addr, len, prot,
+			   MAP_ANON | MAP_PRIVATE | MAP_FIXED, -1, 0);
+		if (ptr == MAP_FAILED) {
+			perror("mmap_aligned() mmap 2");
+			return NULL;
+		}
+	}
+
+out:
+	return ptr;
+}
+
+static char *map_and_populate_region(struct relocate_struct *reloc)
+{
+	unsigned long len = reloc->old_len;
+	char *ptr;
+
+	ptr = mmap_aligned(len, reloc->align, PROT_READ | PROT_WRITE);
+	if (!ptr)
 		return NULL;
 
-	if (nohuge && madvise(ptr, len, MADV_NOHUGEPAGE)) {
+	if (reloc->nohuge && madvise(ptr, len, MADV_NOHUGEPAGE)) {
+		perror("map_and_populate_region() madvise");
+
 		munmap(ptr, len);
 		return NULL;
 	}
 
-	memset(ptr, 'x', len);
+	memset(ptr, 'x', reloc->pop_len);
 	return ptr;
 }
 
-static void *reserve_region(unsigned long len)
+static void *reserve_region(struct relocate_struct *reloc)
 {
-	void *ptr = mmap(NULL, len, PROT_NONE,
-			 MAP_ANON | MAP_PRIVATE, -1, 0);
+	unsigned long len = reloc->new_len;
+	char *ptr;
 
-	if (ptr == MAP_FAILED)
+	ptr = mmap_aligned(len, reloc->align, PROT_NONE);
+	if (!ptr)
 		return NULL;
 
-	if (munmap(ptr, len))
+	if (munmap(ptr, len)) {
+		perror("reserve_region() munmap");
 		return NULL;
+	}
 
 	return ptr;
+}
+
+static bool check_move(struct relocate_struct *reloc, char *dst)
+{
+	unsigned long i;
+
+	for (i = 0; i < reloc->pop_len; i++) {
+		if (dst[i] != 'x') {
+			fprintf(stderr, "check_move fail at %lu\n", i);
+			return false;
+		}
+	}
+
+	return true;
 }
 
 static bool time_relocate(struct relocate_struct *reloc)
@@ -76,13 +132,13 @@ static bool time_relocate(struct relocate_struct *reloc)
 	char *src;
 	void *dst;
 	struct timespec t_start = {0, 0}, t_end = {0, 0};
-	long long  start_ns, end_ns;
+	unsigned long start_ns, end_ns;
 
-	src = map_and_populate_region(reloc->old_len, reloc->nohuge);
+	src = map_and_populate_region(reloc);
 	if (!src)
 		return false;
 
-	dst = reserve_region(reloc->new_len);
+	dst = reserve_region(reloc);
 	if (!dst) {
 		munmap(src, reloc->old_len);
 		return false;
@@ -92,27 +148,42 @@ static bool time_relocate(struct relocate_struct *reloc)
 	if (sys_mremap(src, reloc->old_len, reloc->new_len,
 		       MREMAP_FIXED | MREMAP_MAYMOVE | reloc->additional_flags,
 		       dst) != dst) {
+		perror("time_relocate() mremap");
 		munmap(src, reloc->old_len);
 		return false;
 	}
 	clock_gettime(CLOCK_MONOTONIC, &t_end);
 
+	if (!check_move(reloc, dst))
+		return false;
+
 	start_ns = t_start.tv_sec * NS_PER_SEC + t_start.tv_nsec;
 	end_ns = t_end.tv_sec * NS_PER_SEC + t_end.tv_nsec;
 
 	reloc->time_ns = end_ns - start_ns;
+
+	/* Force reclaim to assert rmap state correct. */
+	if (madvise(dst, reloc->new_len, MADV_PAGEOUT)) {
+		perror("reserve_region() madvise");
+		return false;
+	}
+
 	munmap(dst, reloc->new_len);
 
 	return true;
 }
 
-static unsigned long remap(unsigned long len, bool relocate)
+static unsigned long remap(unsigned long len, bool relocate,
+			   unsigned long pop_len, bool nohuge,
+			   unsigned long align)
 {
 	struct relocate_struct reloc = {
 		.additional_flags = relocate ? MREMAP_MUST_RELOCATE_ANON : 0,
-		.nohuge = true,
+		.nohuge = nohuge,
+		.align = align,
 		.old_len = len,
 		.new_len = len,
+		.pop_len = pop_len,
 	};
 
 	if (!time_relocate(&reloc)) {
@@ -123,45 +194,86 @@ static unsigned long remap(unsigned long len, bool relocate)
 	return reloc.time_ns;
 }
 
-static unsigned long remap_normal(unsigned long len)
+static unsigned long remap_normal(unsigned long len, unsigned long pop_len,
+		bool nohuge, bool align)
 {
-	return remap(len, /* relocate= */false);
+	unsigned long pmd_size = 1UL << 21;
+
+	return remap(len, /* relocate= */false, pop_len, nohuge,
+		     align && len >= pmd_size ? pmd_size : 0);
 }
 
-static unsigned long remap_relocate_anon(unsigned long len)
+static unsigned long remap_relocate(unsigned long len, unsigned long pop_len,
+	bool nohuge, bool align)
 {
-	return remap(len, /* relocate= */true);
+	unsigned long pmd_size = 1UL << 21;
+
+	return remap(len, /* relocate= */true, pop_len, nohuge,
+		     align && len >= pmd_size ? pmd_size : 0);
 }
 
-#define COUNT 10
+#define MB_INTERVAL 100
+
+static void time_move(double pop, bool nohuge, bool align)
+{
+	unsigned long count, normal, remap;
+
+	normal = 0;
+	remap = 0;
+	for (count = 1; (count * PG) < 2 * MB; count++) {
+		unsigned long len = count * PG;
+		unsigned long pop_len = (unsigned long)(pop * (double)len);
+
+		normal += remap_normal(len, pop_len, nohuge, align);
+		remap += remap_relocate(len, pop_len, nohuge, align);
+	}
+
+	printf("[4KB, 2MB) [%.1f populated] Took %lu ns vs. %lu ns (%.2fx slower)%s%s.\n",
+	       pop, normal/count, remap/count, (double)remap / (double)normal,
+	       nohuge ? " [nohuge]" : "", align ? " [align]" : "");
+
+	normal = 0;
+	remap = 0;
+	for (count = 1; count <= 1000; count += MB_INTERVAL) {
+		unsigned long len = count * MB;
+		unsigned long pop_len = (unsigned long)(pop * (double)len);
+
+		normal += remap_normal(len, pop_len, nohuge, align);
+		remap += remap_relocate(len, pop_len, nohuge, align);
+	}
+	printf("[1MB, 1GB] [%.1f populated] Took %lu ns vs. %lu ns (%.2fx slower)%s%s\n",
+	       pop, normal/count, remap/count, (double)remap / (double)normal,
+	       nohuge ? " [nohuge]" : "", align ? " [align]" : "");
+}
 
 int main(void)
 {
-	unsigned long count;
+	int i = 0;
 
-	for (count = 1; (count * PG) < MB; count++) {
-		unsigned long normal = remap_normal(count * PG);
-		unsigned long remap = remap_relocate_anon(count * PG);
+	for (i = 1; i <= 10; i++) {
+		double pop = (double)i/10.f;
 
-		printf("%luKB Took %lu ns vs. %lu ns (%lux slower).\n", count,
-		       normal, remap, remap / normal);
+		time_move(pop, /* nohuge= */false, /* align= */false);
 	}
 
-	for (count = 1; count < 1000; count += 10) {
-		unsigned long normal = remap_normal(count * MB);
-		unsigned long remap = remap_relocate_anon(count * MB);
+	for (i = 1; i <= 10; i++) {
+		double pop = (double)i/10.f;
 
-		printf("%luMB Took %lu ns vs. %lu ns (%lux slower).\n", count,
-		       normal, remap, remap / normal);
+		time_move(pop, /* nohuge= */false, /* align= */true);
 	}
 
-	for (count = 1; count < 2; count++) {
-		unsigned long normal = remap_normal(count * GB);
-		unsigned long remap = remap_relocate_anon(count * GB);
+	for (i = 1; i <= 10; i++) {
+		double pop = (double)i/10.f;
 
-		printf("%luGB Took %lu ns vs. %lu ns (%lux slower).\n", count,
-		       normal, remap, remap / normal);
+		time_move(pop, /* nohuge= */true, /* align= */false);
 	}
+
+	for (i = 1; i <= 10; i++) {
+		double pop = (double)i/10.f;
+
+		time_move(pop, /* nohuge= */true, /* align= */true);
+	}
+
 
 	return EXIT_SUCCESS;
 }
