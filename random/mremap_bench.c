@@ -21,6 +21,8 @@
 
 #define NS_PER_SEC 1000000000ULL
 
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
+
 struct relocate_struct {
 	/* Input. */
 	int additional_flags;
@@ -217,32 +219,45 @@ static unsigned long remap_relocate(unsigned long len, unsigned long pop_len,
 static void time_move(double pop, bool nohuge, bool align)
 {
 	unsigned long count, normal, remap;
+	unsigned long max_remap = 0, max_normal = 0;
+	double av_normal, av_remap;
 
 	normal = 0;
 	remap = 0;
 	for (count = 1; (count * PG) < 2 * MB; count++) {
 		unsigned long len = count * PG;
 		unsigned long pop_len = (unsigned long)(pop * (double)len);
+		unsigned long normal_ns, remap_ns;
 
-		normal += remap_normal(len, pop_len, nohuge, align);
-		remap += remap_relocate(len, pop_len, nohuge, align);
+		normal_ns = remap_normal(len, pop_len, nohuge, align);
+		remap_ns = remap_relocate(len, pop_len, nohuge, align);
+		max_remap = MAX(max_remap, remap_ns);
+		max_normal = MAX(max_normal, normal_ns);
+
+		normal += normal_ns;
+		remap += remap_ns;
 	}
 
-	printf("[4KB, 2MB) [%.1f populated] Took %lu ns vs. %lu ns (%.2fx slower)%s%s.\n",
-	       pop, normal/count, remap/count, (double)remap / (double)normal,
-	       nohuge ? " [nohuge]" : "", align ? " [align]" : "");
-
-	normal = 0;
-	remap = 0;
 	for (count = 1; count <= 1000; count += MB_INTERVAL) {
 		unsigned long len = count * MB;
 		unsigned long pop_len = (unsigned long)(pop * (double)len);
+		unsigned long normal_ns, remap_ns;
 
-		normal += remap_normal(len, pop_len, nohuge, align);
-		remap += remap_relocate(len, pop_len, nohuge, align);
+		normal_ns = remap_normal(len, pop_len, nohuge, align);
+		remap_ns = remap_relocate(len, pop_len, nohuge, align);
+		max_remap = MAX(max_remap, remap_ns);
+		max_normal = MAX(max_normal, normal_ns);
+
+		normal += normal_ns;
+		remap += remap_ns;
 	}
-	printf("[1MB, 1GB] [%.1f populated] Took %lu ns vs. %lu ns (%.2fx slower)%s%s\n",
-	       pop, normal/count, remap/count, (double)remap / (double)normal,
+
+	av_normal = (double)normal / (double)count;
+	av_remap = (double)remap / (double)count;
+
+	printf("[4KB, 1GB] [%.1f populated] Took %.2fns vs. %.2fns (%.2fx [%.2fus] slower, max normal=%.2fms,remap=%.2fms)%s%s\n",
+	       pop, av_normal, av_remap, av_remap / av_normal, (av_remap - av_normal) / 1000.,
+	       (double)max_normal / 1000000., (double)max_remap / 1000000.,
 	       nohuge ? " [nohuge]" : "", align ? " [align]" : "");
 }
 
