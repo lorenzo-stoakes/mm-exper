@@ -289,6 +289,5 @@ int main(void)
 		time_move(pop, /* nohuge= */true, /* align= */true);
 	}
 
-
 	return EXIT_SUCCESS;
 }
