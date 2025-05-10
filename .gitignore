@@ -15,6 +15,7 @@ read-pageflags/read
 read-pageflags/test2.txt
 read-pageflags/write-test
 read-pageflags/readahead
+read-pageflags/test.txt
 
 pagestat/example
 pagestat/pagestat
