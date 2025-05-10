@@ -378,7 +378,7 @@ static void do_mremap_mprotect(struct mremap_merge_config *conf)
 
 	/* Now map 10 pages. */
 	ptr = mmap(ptr, 10 * page_size, PROT_READ | PROT_WRITE,
-		   MAP_ANON | MAP_PRIVATE | MAP_FIXED, -1, 0);
+		   MAP_ANON | MAP_PRIVATE | MAP_FIXED | MAP_NORESERVE, -1, 0);
 	if (ptr == MAP_FAILED) {
 		perror("mmap");
 		exit(EXIT_FAILURE);
@@ -386,7 +386,7 @@ static void do_mremap_mprotect(struct mremap_merge_config *conf)
 
 	/* Map another 10 at a distance away. */
 	ptr2 = mmap(&ptr[50 * page_size], 10 * page_size, PROT_READ | PROT_WRITE,
-		    MAP_ANON | MAP_PRIVATE | MAP_FIXED, -1, 0);
+		    MAP_ANON | MAP_PRIVATE | MAP_FIXED | MAP_NORESERVE, -1, 0);
 	if (ptr2 == MAP_FAILED) {
 		perror("mmap 2");
 		exit(EXIT_FAILURE);
