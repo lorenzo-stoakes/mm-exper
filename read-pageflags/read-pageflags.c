@@ -454,7 +454,7 @@ bool print_flags_virt_precalc(const void *ptr,
 
 	if (pfn == INVALID_VALUE) {
 		printf("(not present) [%s]\n", descr);
-		return false;
+		return true;
 	} else if (pfn == 0) {
 		printf("(cannot retrieve PFN) [%s]\n", descr);
 		return false;
