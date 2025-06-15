@@ -58,12 +58,7 @@ static constexpr auto delay = 500ms;
 
 namespace
 {
-// While 'volatile' is often misused we explicitly use it here to indicate to
-// the compiler not to get 'smart' and try to elide code but rather to take into
-// account that what is mapped might get updated by the OS (the very thing we
-// are investigating).
-
-volatile char* map_shared(bool populate)
+char* map_shared(bool populate)
 {
 	const int fd = open(test_path, O_RDWR);
 
@@ -71,10 +66,10 @@ volatile char* map_shared(bool populate)
 			 MAP_SHARED | (populate ? MAP_POPULATE : 0), fd, 0);
 	close(fd);
 
-	return ret == MAP_FAILED ? nullptr : (volatile char*)ret;
+	return ret == MAP_FAILED ? nullptr : ( char*)ret;
 }
 
-volatile char* map_private(bool populate)
+char* map_private(bool populate)
 {
 	const int fd = open(test_path, O_RDWR);
 
@@ -82,7 +77,7 @@ volatile char* map_private(bool populate)
 			 MAP_PRIVATE | (populate ? MAP_POPULATE : 0), fd, 0);
 	close(fd);
 
-	return ret == MAP_FAILED ? nullptr : (volatile char*)ret;
+	return ret == MAP_FAILED ? nullptr : ( char*)ret;
 }
 
 void setup_file()
@@ -110,7 +105,7 @@ char next_char(char chr)
 } // namespace
 
 struct page_state {
-	explicit page_state(volatile char* ptr)
+	explicit page_state(char* ptr)
 		: ptr{ptr}
 		, pagemap{read_pagemap((const void *)ptr)}
 		, pfn{extract_pfn(pagemap)}
@@ -140,7 +135,7 @@ struct page_state {
 		return !operator==(that);
 	}
 
-	volatile char* ptr;
+	char* ptr;
 	uint64_t pagemap;
 	uint64_t pfn;
 	uint64_t kpageflags;
@@ -252,7 +247,7 @@ int main()
 
 #ifdef READ_FAULT_PRIVATE
 			// We may need to fault the page back in, so access it.
-			(volatile void)strptr[0];
+			((volatile char *)strptr)[0];
 #endif
 
 			page_state curr(strptr);
