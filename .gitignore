@@ -60,6 +60,7 @@ random/mremap
 random/mremap_bench
 random/mremap_repro
 random/mremap_unmap
+random/mremap_warn
 random/munmap
 random/noreserve
 random/oom
